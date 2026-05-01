@@ -1,4 +1,4 @@
-import type { Exercise, Client, Program, Template, AppSettings, Subscription, PlanType, PlanStatus, ProfileType, EquipmentType, FoodItem, FoodCategory, DietPlan, ClientCheckIn, FitnessGoal, PlanItemStatus } from '../types';
+import type { Exercise, Client, Program, Template, AppSettings, Subscription, PlanType, PlanStatus, ProfileType, EquipmentType, FoodItem, FoodCategory, DietPlan, ClientCheckIn, ClientMood, ClientProgressPhoto, ClientSessionLog, LoggedExercise, FitnessGoal, PlanItemStatus, DietLog } from '../types';
 
 // ── Exercise ──────────────────────────────────────────────────────────────────
 
@@ -74,8 +74,17 @@ export function dbRowToClient(row: Record<string, unknown>): Client {
     medicalHistory: row.medical_history as string | undefined,
     foodPreferences: row.food_preferences as string | undefined,
     foodDislikes: row.food_dislikes as string | undefined,
+    exercisePreferences: row.exercise_preferences as string | undefined,
+    exerciseDislikes: row.exercise_dislikes as string | undefined,
+    allergies: row.allergies as string | undefined,
     healthAlerts: row.health_alerts as string | undefined,
     generalNotes: row.general_notes as string | undefined,
+    trainerMessage: row.trainer_message as string | undefined,
+    clientUserId: row.client_user_id as string | undefined,
+    invitedAt: row.invited_at as string | undefined,
+    inviteAcceptedAt: row.invite_accepted_at as string | undefined,
+    subscriptionStartDate: row.subscription_start_date as string | undefined,
+    subscriptionEndDate: row.subscription_end_date as string | undefined,
   };
 }
 
@@ -93,8 +102,14 @@ export function clientToDbRow(c: Client): Record<string, unknown> {
     medical_history: c.medicalHistory,
     food_preferences: c.foodPreferences,
     food_dislikes: c.foodDislikes,
+    exercise_preferences: c.exercisePreferences,
+    exercise_dislikes: c.exerciseDislikes,
+    allergies: c.allergies,
     health_alerts: c.healthAlerts,
     general_notes: c.generalNotes,
+    trainer_message: c.trainerMessage,
+    subscription_start_date: c.subscriptionStartDate,
+    subscription_end_date: c.subscriptionEndDate,
   };
 }
 
@@ -110,8 +125,14 @@ export function clientPatchToDbRow(patch: Partial<Omit<Client, 'id' | 'createdAt
   if ('medicalHistory' in patch) row.medical_history = patch.medicalHistory;
   if ('foodPreferences' in patch) row.food_preferences = patch.foodPreferences;
   if ('foodDislikes' in patch) row.food_dislikes = patch.foodDislikes;
+  if ('exercisePreferences' in patch) row.exercise_preferences = patch.exercisePreferences;
+  if ('exerciseDislikes' in patch) row.exercise_dislikes = patch.exerciseDislikes;
+  if ('allergies' in patch) row.allergies = patch.allergies;
   if ('healthAlerts' in patch) row.health_alerts = patch.healthAlerts;
   if ('generalNotes' in patch) row.general_notes = patch.generalNotes;
+  if ('trainerMessage' in patch) row.trainer_message = patch.trainerMessage;
+  if ('subscriptionStartDate' in patch) row.subscription_start_date = patch.subscriptionStartDate;
+  if ('subscriptionEndDate' in patch) row.subscription_end_date = patch.subscriptionEndDate;
   return row;
 }
 
@@ -126,6 +147,11 @@ export function dbRowToClientCheckIn(row: Record<string, unknown>): ClientCheckI
     waistCm: row.waist_cm as number | undefined,
     chestCm: row.chest_cm as number | undefined,
     hipCm: row.hip_cm as number | undefined,
+    thighCm: row.thigh_cm as number | undefined,
+    armCm: row.arm_cm as number | undefined,
+    mood: row.mood as ClientMood | undefined,
+    energyLevel: row.energy_level as number | undefined,
+    weeklyNotes: row.weekly_notes as string | undefined,
     notes: row.notes as string | undefined,
     createdAt: row.created_at as string,
   };
@@ -142,8 +168,101 @@ export function clientCheckInToDbRow(c: ClientCheckIn): Record<string, unknown> 
     waist_cm: c.waistCm ?? null,
     chest_cm: c.chestCm ?? null,
     hip_cm: c.hipCm ?? null,
+    thigh_cm: c.thighCm ?? null,
+    arm_cm: c.armCm ?? null,
+    mood: c.mood ?? null,
+    energy_level: c.energyLevel ?? null,
+    weekly_notes: c.weeklyNotes ?? null,
     notes: c.notes ?? null,
     created_at: c.createdAt,
+  };
+}
+
+// ── Client Progress Photo ─────────────────────────────────────────────────────
+
+export function dbRowToProgressPhoto(row: Record<string, unknown>): ClientProgressPhoto {
+  return {
+    id: row.id as string,
+    clientId: row.client_id as string,
+    checkInId: row.check_in_id as string | undefined,
+    photoPath: row.photo_url as string,
+    takenAt: row.taken_at as string,
+    caption: row.caption as string | undefined,
+    pose: row.pose as ClientProgressPhoto['pose'] | undefined,
+    createdAt: row.created_at as string,
+  };
+}
+
+export function progressPhotoToDbRow(p: ClientProgressPhoto): Record<string, unknown> {
+  return {
+    id: p.id,
+    client_id: p.clientId,
+    check_in_id: p.checkInId ?? null,
+    photo_url: p.photoPath,
+    taken_at: p.takenAt,
+    caption: p.caption ?? null,
+    pose: p.pose ?? null,
+    created_at: p.createdAt,
+  };
+}
+
+// ── Client Session Log ────────────────────────────────────────────────────────
+
+export function dbRowToSessionLog(row: Record<string, unknown>): ClientSessionLog {
+  return {
+    id: row.id as string,
+    clientId: row.client_id as string,
+    programId: row.program_id as string | undefined,
+    programSessionId: row.program_session_id as string | undefined,
+    loggedAt: row.logged_at as string,
+    exercises: (row.exercises as LoggedExercise[] | null) ?? [],
+    notes: row.notes as string | undefined,
+    createdAt: row.created_at as string,
+  };
+}
+
+export function sessionLogToDbRow(log: ClientSessionLog): Record<string, unknown> {
+  return {
+    id: log.id,
+    client_id: log.clientId,
+    program_id: log.programId ?? null,
+    program_session_id: log.programSessionId ?? null,
+    logged_at: log.loggedAt,
+    exercises: log.exercises,
+    notes: log.notes ?? null,
+    created_at: log.createdAt,
+  };
+}
+
+// ── Diet Log ──────────────────────────────────────────────────────────────────
+
+export function dbRowToDietLog(row: Record<string, unknown>): DietLog {
+  return {
+    id: row.id as string,
+    clientId: row.client_id as string,
+    planId: row.plan_id as string,
+    dayId: row.day_id as string,
+    mealId: row.meal_id as string,
+    date: row.date as string,
+    eaten: Boolean(row.eaten),
+    notes: row.notes as string | undefined,
+    createdAt: row.created_at as string,
+    updatedAt: row.updated_at as string,
+  };
+}
+
+export function dietLogToDbRow(log: DietLog): Record<string, unknown> {
+  return {
+    id: log.id,
+    client_id: log.clientId,
+    plan_id: log.planId,
+    day_id: log.dayId,
+    meal_id: log.mealId,
+    date: log.date,
+    eaten: log.eaten,
+    notes: log.notes ?? null,
+    created_at: log.createdAt,
+    updated_at: log.updatedAt,
   };
 }
 
@@ -298,7 +417,7 @@ export function settingsToDbRow(s: AppSettings): Record<string, unknown> {
   return {
     profile_type: s.profileType ?? 'physio',
     clinic_name: s.clinicName,
-    clinic_logo: s.clinicLogo,
+    clinic_logo: s.clinicLogo ?? null,
     clinic_phone: s.clinicPhone,
     clinic_email: s.clinicEmail,
     clinic_address: s.clinicAddress,
@@ -391,7 +510,25 @@ export function foodItemPatchToDbRow(patch: Partial<FoodItem>): Record<string, u
 
 // ── Diet Plan ─────────────────────────────────────────────────────────────────
 
+/** Backfill `dayOfWeek` on diet days whose label matches a weekday name (for plans saved before the field existed). */
+function weekdayLabelToIndex(label: string): number | undefined {
+  switch (label.trim().toLowerCase()) {
+    case 'sunday':    return 0;
+    case 'monday':    return 1;
+    case 'tuesday':   return 2;
+    case 'wednesday': return 3;
+    case 'thursday':  return 4;
+    case 'friday':    return 5;
+    case 'saturday':  return 6;
+    default:          return undefined;
+  }
+}
+
 export function dbRowToDietPlan(row: Record<string, unknown>): DietPlan {
+  const rawDays = (row.days as DietPlan['days'] | null) ?? [];
+  const days = rawDays.map((d) =>
+    d.dayOfWeek === undefined ? { ...d, dayOfWeek: weekdayLabelToIndex(d.label) } : d,
+  );
   return {
     id: row.id as string,
     clientId: row.client_id as string,
@@ -403,7 +540,7 @@ export function dbRowToDietPlan(row: Record<string, unknown>): DietPlan {
     targetFat: row.target_fat as number | undefined,
     durationWeeks: row.duration_weeks as number,
     startDate: row.start_date as string,
-    days: (row.days as DietPlan['days'] | null) ?? [],
+    days,
     notes: row.notes as string | undefined,
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,

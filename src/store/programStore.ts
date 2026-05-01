@@ -30,6 +30,7 @@ interface ProgramStore {
 
   addSession: () => void;
   updateSessionLabel: (sessionId: string, label: string) => void;
+  updateSessionDayOfWeek: (sessionId: string, dayOfWeek: number | undefined) => void;
   deleteSession: (sessionId: string) => void;
 
   addExerciseToSession: (sessionId: string, exerciseId: string) => void;
@@ -201,6 +202,20 @@ export const useProgramStore = create<ProgramStore>((set, get) => ({
           ...state.draft,
           sessions: state.draft.sessions.map((s) =>
             s.id === sessionId ? { ...s, label } : s
+          ),
+        },
+      };
+    });
+  },
+
+  updateSessionDayOfWeek: (sessionId, dayOfWeek) => {
+    set((state) => {
+      if (!state.draft) return state;
+      return {
+        draft: {
+          ...state.draft,
+          sessions: state.draft.sessions.map((s) =>
+            s.id === sessionId ? { ...s, dayOfWeek } : s
           ),
         },
       };

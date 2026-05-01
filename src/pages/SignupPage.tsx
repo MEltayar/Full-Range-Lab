@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react';
 import { useAuthStore } from '../store/authStore';
+import { BrandTile } from '../components/Brand';
 import {
   PASSWORD_PLACEHOLDER,
   cleanupPasswordError,
@@ -142,9 +143,8 @@ export default function SignupPage() {
 
         {/* Brand */}
         <div className="flex flex-col items-center gap-4 mb-10">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #f97316, #dc2626)', animation: 'sp-logo-pulse 3s ease-in-out infinite' }}>
-            <span className="text-xl font-black text-white tracking-tight">FRL</span>
+          <div className="rounded-2xl overflow-hidden" style={{ animation: 'sp-logo-pulse 3s ease-in-out infinite' }}>
+            <BrandTile className="w-16 h-16 rounded-2xl" />
           </div>
           <div className="text-center">
             <h1 className="text-3xl font-black text-white tracking-tight drop-shadow-lg">Full Range Lab</h1>

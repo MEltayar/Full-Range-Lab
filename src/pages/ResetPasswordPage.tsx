@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../store/authStore';
+import { BrandTile } from '../components/Brand';
 import {
   PASSWORD_PLACEHOLDER,
   cleanupPasswordError,
@@ -112,10 +113,7 @@ export default function ResetPasswordPage() {
 
         {/* Brand */}
         <div className="flex flex-col items-center gap-4 mb-10">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #f97316, #dc2626)', boxShadow: '0 8px 32px rgba(249,115,22,0.5)' }}>
-            <span className="text-xl font-black text-white tracking-tight">FRL</span>
-          </div>
+          <BrandTile className="w-16 h-16 rounded-2xl shadow-2xl" />
           <div className="text-center">
             <h1 className="text-3xl font-black text-white tracking-tight">Full Range Lab</h1>
             <p className="text-sm font-semibold mt-1.5" style={{ color: 'rgba(253,186,116,0.75)' }}>

@@ -8,6 +8,7 @@ import SessionCard from './SessionCard';
 interface SessionListProps {
   sessions: Session[];
   onUpdateLabel: (sessionId: string, label: string) => void;
+  onUpdateDayOfWeek: (sessionId: string, dayOfWeek: number | undefined) => void;
   onDeleteSession: (sessionId: string) => void;
   onAddExercise: (sessionId: string) => void;
   onUpdateParams: (
@@ -57,6 +58,7 @@ function SortableSessionWrapper({ session, children }: SortableSessionWrapperPro
 export default function SessionList({
   sessions,
   onUpdateLabel,
+  onUpdateDayOfWeek,
   onDeleteSession,
   onAddExercise,
   onUpdateParams,
@@ -91,6 +93,7 @@ export default function SessionList({
               <SessionCard
                 session={session}
                 onUpdateLabel={(label) => onUpdateLabel(session.id, label)}
+                onUpdateDayOfWeek={(dow) => onUpdateDayOfWeek(session.id, dow)}
                 onDelete={() => onDeleteSession(session.id)}
                 onAddExercise={() => onAddExercise(session.id)}
                 onUpdateParams={(peId, params) => onUpdateParams(session.id, peId, params)}

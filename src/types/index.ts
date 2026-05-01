@@ -16,9 +16,29 @@ export interface Subscription {
   createdAt: string;
 }
 
+export type PaymentMethod = 'vodafone_cash' | 'instapay' | 'other';
+export type PaymentProofStatus = 'pending' | 'approved' | 'rejected';
+
+export interface PaymentProof {
+  id: string;
+  userId: string;
+  storagePath: string;
+  method: PaymentMethod;
+  amountPaid: number | null;
+  referenceNote: string | null;
+  requestedPlan: 'pro_monthly' | 'pro_yearly';
+  status: PaymentProofStatus;
+  reviewedBy: string | null;
+  reviewedAt: string | null;
+  adminNotes: string | null;
+  createdAt: string;
+}
+
 export interface PlanLimits {
   maxClients: number;
   maxProgramsPerClient: number;
+  /** Max clients that can be invited to the branded portal. 0 = portal disabled. */
+  maxClientsInvited: number;
   canPreview: boolean;
   canExportPDF: boolean;
   canExportExcel: boolean;
@@ -87,8 +107,60 @@ export interface Client {
   // Trainer notes
   foodPreferences?: string;
   foodDislikes?: string;
+  exercisePreferences?: string;
+  exerciseDislikes?: string;
+  allergies?: string;
   healthAlerts?: string;
   generalNotes?: string;
+  // Public-to-client message — shown on the client portal. `generalNotes` stays trainer-only.
+  trainerMessage?: string;
+  // Phase 2: linked Supabase auth user for the client's own login. Null until invited.
+  clientUserId?: string;
+  invitedAt?: string;
+  inviteAcceptedAt?: string;
+  // Engagement window with the trainer. When `subscriptionEndDate` is in the past,
+  // the client portal shows an expired wall. Both null = open-ended (no expiry).
+  // ISO date strings (YYYY-MM-DD) — date-only, no timezone.
+  subscriptionStartDate?: string;
+  subscriptionEndDate?: string;
+}
+
+export type ClientMood = 'great' | 'good' | 'okay' | 'tired' | 'bad';
+
+export interface LoggedSet {
+  weightKg?: number;
+  reps?: number;
+  rpe?: number;          // 1..10 optional
+}
+
+export interface LoggedExercise {
+  exerciseId: string;
+  sets: LoggedSet[];
+  notes?: string;
+}
+
+export interface ClientSessionLog {
+  id: string;
+  clientId: string;
+  programId?: string;
+  programSessionId?: string;
+  loggedAt: string;          // YYYY-MM-DD
+  exercises: LoggedExercise[];
+  notes?: string;
+  createdAt: string;
+}
+
+export type PhotoPose = 'front' | 'side' | 'back' | 'other';
+
+export interface ClientProgressPhoto {
+  id: string;
+  clientId: string;
+  checkInId?: string;
+  photoPath: string;     // path inside the `progress-photos` bucket
+  takenAt: string;
+  caption?: string;
+  pose?: PhotoPose;
+  createdAt: string;
 }
 
 export interface ClientCheckIn {
@@ -101,6 +173,11 @@ export interface ClientCheckIn {
   waistCm?: number;
   chestCm?: number;
   hipCm?: number;
+  thighCm?: number;
+  armCm?: number;
+  mood?: ClientMood;
+  energyLevel?: number;  // 1..5
+  weeklyNotes?: string;
   notes?: string;
   createdAt: string;
 }
@@ -120,6 +197,8 @@ export interface ProgramExercise {
 export interface Session {
   id: string;
   label: string;
+  /** Day-of-week (0=Sun, 1=Mon, …, 6=Sat) — matches `Date.getDay()`. Optional. */
+  dayOfWeek?: number;
   exercises: ProgramExercise[];
 }
 
@@ -234,6 +313,8 @@ export interface DietMeal {
 export interface DietDay {
   id: string;
   label: string;      // e.g. "Day 1", "Monday"
+  /** Day-of-week (0=Sun, 1=Mon, …, 6=Sat) — matches `Date.getDay()`. Optional. */
+  dayOfWeek?: number;
   meals: DietMeal[];
 }
 
@@ -254,6 +335,19 @@ export interface DietPlan {
   updatedAt: string;
   userId?: string;
   status?: PlanItemStatus;
+}
+
+export interface DietLog {
+  id: string;
+  clientId: string;
+  planId: string;
+  dayId: string;
+  mealId: string;
+  date: string;        // YYYY-MM-DD
+  eaten: boolean;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface HelpAnnouncement {

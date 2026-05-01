@@ -68,6 +68,12 @@ export default function TemplateEditorPage() {
     );
   }
 
+  function handleUpdateDayOfWeek(sessionId: string, dayOfWeek: number | undefined) {
+    setSessions((prev) =>
+      prev.map((s) => (s.id === sessionId ? { ...s, dayOfWeek } : s))
+    );
+  }
+
   function handleDeleteSession(sessionId: string) {
     setSessions((prev) => prev.filter((s) => s.id !== sessionId));
   }
@@ -252,6 +258,7 @@ export default function TemplateEditorPage() {
         <SessionList
           sessions={sessions}
           onUpdateLabel={handleUpdateLabel}
+          onUpdateDayOfWeek={handleUpdateDayOfWeek}
           onDeleteSession={handleDeleteSession}
           onAddExercise={(sessionId) => {
             setActiveSessionId(sessionId);

@@ -38,6 +38,20 @@ interface DietPlanStore {
 }
 
 const DAY_LABELS = ['Saturday', 'Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+
+/** Map a weekday label to its `Date.getDay()` index (0=Sun…6=Sat). Returns undefined for non-weekday labels. */
+function weekdayLabelToIndex(label: string): number | undefined {
+  switch (label.trim().toLowerCase()) {
+    case 'sunday':    return 0;
+    case 'monday':    return 1;
+    case 'tuesday':   return 2;
+    case 'wednesday': return 3;
+    case 'thursday':  return 4;
+    case 'friday':    return 5;
+    case 'saturday':  return 6;
+    default:          return undefined;
+  }
+}
 const MEAL_LABELS = ['Breakfast', 'Morning Snack', 'Lunch', 'Afternoon Snack', 'Dinner'];
 
 function mutateDraft(
@@ -140,7 +154,12 @@ export const useDietPlanStore = create<DietPlanStore>((set, get) => ({
   addDay: () => {
     mutateDraft(get, set, (d) => {
       const label = DAY_LABELS[d.days.length] ?? `Day ${d.days.length + 1}`;
-      const newDay: DietDay = { id: crypto.randomUUID(), label, meals: [] };
+      const newDay: DietDay = {
+        id: crypto.randomUUID(),
+        label,
+        dayOfWeek: weekdayLabelToIndex(label),
+        meals: [],
+      };
       return { ...d, days: [...d.days, newDay] };
     });
   },
@@ -148,7 +167,11 @@ export const useDietPlanStore = create<DietPlanStore>((set, get) => ({
   updateDayLabel: (dayId, label) => {
     mutateDraft(get, set, (d) => ({
       ...d,
-      days: d.days.map((day) => (day.id === dayId ? { ...day, label } : day)),
+      days: d.days.map((day) =>
+        day.id === dayId
+          ? { ...day, label, dayOfWeek: weekdayLabelToIndex(label) }
+          : day,
+      ),
     }));
   },
 

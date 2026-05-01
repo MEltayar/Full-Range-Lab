@@ -1046,7 +1046,7 @@ export default function ProgramPDF({
   const GoalBox = () =>
     program.goal ? (
       <View style={S.goalBox}>
-        <Text style={S.goalLabel}>Rehabilitation Goal</Text>
+        <Text style={S.goalLabel}>Program Goal</Text>
         <Text style={S.goalText}>{program.goal}</Text>
       </View>
     ) : null;

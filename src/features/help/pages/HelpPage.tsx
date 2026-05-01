@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Mail, MessageCircle, Stethoscope, Users, HelpCircle, Zap, Pencil, Plus, Trash2, X, Save, ShieldCheck, FileText, FileSpreadsheet, Moon, Send, Crosshair, Dumbbell, Salad } from 'lucide-react';
+import { Mail, MessageCircle, Stethoscope, Users, HelpCircle, Zap, Pencil, Plus, Trash2, X, Save, ShieldCheck, FileText, FileSpreadsheet, Moon, Send, Crosshair, Dumbbell, Salad, Smartphone } from 'lucide-react';
 import { useSettingsStore } from '../../../store/settingsStore';
 import { useUserStore } from '../../../store/userStore';
+import { BrandTile } from '../../../components/Brand';
 import type { HelpAnnouncement } from '../../../types';
 
 function genId() { return Math.random().toString(36).slice(2, 10); }
@@ -190,11 +191,14 @@ export default function HelpPage() {
     <div className="flex flex-col gap-8 pb-10">
 
       {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Help & About</h1>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-          Everything you need to know about Full Range Lab.
-        </p>
+      <div className="flex items-center gap-4">
+        <BrandTile className="w-12 h-12 rounded-xl shadow-md" />
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Help & About</h1>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Everything you need to know about Full Range Lab.
+          </p>
+        </div>
       </div>
 
       {/* What's New — visible to all if there are posts, editable by admin */}
@@ -209,8 +213,8 @@ export default function HelpPage() {
         <div className="px-5 py-5 flex flex-col gap-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
           <p>
             <strong className="text-gray-900 dark:text-gray-100">Full Range Lab</strong> is a
-            professional client management platform built for healthcare and fitness practitioners
-            — physiotherapists, personal trainers, nutritionists, and rehab coaches — who need
+            professional client management platform built for fitness and healthcare practitioners
+            — personal trainers, physiotherapists, nutritionists, and rehab coaches — who need
             a single place to manage clients, build programs, plan nutrition, and deliver polished
             exports.
           </p>
@@ -225,45 +229,15 @@ export default function HelpPage() {
             pre-built rehabilitation templates, 30 PDF layout styles, diet plan exports, client
             activity timelines, and body metrics tracking — all linked to the same client profile.
           </p>
-        </div>
-      </section>
-
-      {/* ── Who is it for ────────────────────────────── */}
-      <section className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
-        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-700 bg-teal-50 dark:bg-teal-900/20">
-          <Users size={18} className="text-teal-600 dark:text-teal-400 shrink-0" />
-          <h2 className="font-semibold text-gray-900 dark:text-gray-100">Who is it for?</h2>
-        </div>
-        <div className="px-5 py-5 flex flex-col gap-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
           <p>
-            Full Range Lab is built for healthcare and fitness professionals who prescribe
-            structured programs to clients, including:
-          </p>
-          <ul className="flex flex-col gap-3">
-            {[
-              { title: 'Physiotherapists',                     desc: 'Build condition-specific rehab programs, track recovery progress, and export professional session sheets for patients.' },
-              { title: 'Personal Trainers & Strength Coaches', desc: 'Create progressive training blocks with full exercise parameters, linked diet plans, and body composition tracking across check-ins.' },
-              { title: 'Sports Rehabilitation Therapists',     desc: 'Manage athletes returning from injury with phased programs, plan status tracking, and exportable documentation.' },
-              { title: 'Nutritionists & Dietitians',           desc: 'Design day-by-day meal plans with automatic macro breakdowns, food library management, and branded diet plan exports.' },
-              { title: 'Chiropractors & Osteopaths',           desc: 'Prescribe home exercise routines with video-linked exercises and generate patient-ready PDF handouts.' },
-              { title: 'Occupational Therapists',              desc: 'Create functional movement programs tailored to specific conditions and goals.' },
-            ].map(({ title, desc }) => (
-              <li key={title} className="flex items-start gap-3">
-                <Stethoscope size={15} className="text-teal-500 dark:text-teal-400 shrink-0 mt-0.5" />
-                <span>
-                  <strong className="text-gray-900 dark:text-gray-100">{title}</strong>
-                  {' '}— {desc}
-                </span>
-              </li>
-            ))}
-          </ul>
-          <p className="text-gray-500 dark:text-gray-400 italic">
-            If your work involves prescribing movement or nutrition — Full Range Lab was made for you.
+            And clients aren't left out — every client gets their own private, mobile-friendly
+            portal to see their program, log check-ins, upload progress photos, and follow their
+            diet plan, all under your branding.
           </p>
         </div>
       </section>
 
-      {/* ── How we compare ──────────────────────────── */}
+      {/* ── Why Full Range Lab ──────────────────────── */}
       <section className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
         <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-700 bg-orange-50 dark:bg-orange-900/20">
           <ShieldCheck size={18} className="text-orange-600 dark:text-orange-400 shrink-0" />
@@ -288,6 +262,12 @@ export default function HelpPage() {
                 title: 'Everything on one client profile',
                 desc: 'Training programs, diet plans, body metrics, check-ins, and activity history — all linked to the same client. No jumping between modules or losing context.',
                 color: 'text-teal-500',
+              },
+              {
+                icon: Smartphone,
+                title: 'Branded mobile-first client portal',
+                desc: 'Clients get their own private login to view their program and diet plan, log check-ins, and upload progress photos — all under your branding, with a per-client subscription window you control.',
+                color: 'text-rose-500',
               },
               {
                 icon: FileText,
@@ -335,6 +315,41 @@ export default function HelpPage() {
               </div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* ── Who is it for ────────────────────────────── */}
+      <section className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 dark:border-gray-700 bg-teal-50 dark:bg-teal-900/20">
+          <Users size={18} className="text-teal-600 dark:text-teal-400 shrink-0" />
+          <h2 className="font-semibold text-gray-900 dark:text-gray-100">Who is it for?</h2>
+        </div>
+        <div className="px-5 py-5 flex flex-col gap-4 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+          <p>
+            Full Range Lab is built for healthcare and fitness professionals who prescribe
+            structured programs to clients, including:
+          </p>
+          <ul className="flex flex-col gap-3">
+            {[
+              { title: 'Personal Trainers & Strength Coaches', desc: 'Create progressive training blocks with full exercise parameters, linked diet plans, and body composition tracking across check-ins.' },
+              { title: 'Physiotherapists',                     desc: 'Build condition-specific rehab programs, track recovery progress, and export professional session sheets for patients.' },
+              { title: 'Sports Rehabilitation Therapists',     desc: 'Manage athletes returning from injury with phased programs, plan status tracking, and exportable documentation.' },
+              { title: 'Nutritionists & Dietitians',           desc: 'Design day-by-day meal plans with automatic macro breakdowns, food library management, and branded diet plan exports.' },
+              { title: 'Chiropractors & Osteopaths',           desc: 'Prescribe home exercise routines with video-linked exercises and generate patient-ready PDF handouts.' },
+              { title: 'Occupational Therapists',              desc: 'Create functional movement programs tailored to specific conditions and goals.' },
+            ].map(({ title, desc }) => (
+              <li key={title} className="flex items-start gap-3">
+                <Stethoscope size={15} className="text-teal-500 dark:text-teal-400 shrink-0 mt-0.5" />
+                <span>
+                  <strong className="text-gray-900 dark:text-gray-100">{title}</strong>
+                  {' '}— {desc}
+                </span>
+              </li>
+            ))}
+          </ul>
+          <p className="text-gray-500 dark:text-gray-400 italic">
+            If your work involves prescribing movement or nutrition — Full Range Lab was made for you.
+          </p>
         </div>
       </section>
 

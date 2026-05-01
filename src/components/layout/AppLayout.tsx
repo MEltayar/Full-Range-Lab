@@ -2,20 +2,23 @@ import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
 import { Menu } from 'lucide-react';
 import Sidebar from './Sidebar';
+import { BrandTile } from '../Brand';
 import ToastContainer from '../ui/ToastContainer';
 import ConfirmDialog from '../ui/ConfirmDialog';
 import TrialBanner from '../TrialBanner';
+import RenewalBanner from '../RenewalBanner';
 import TrialExpiredWall from '../TrialExpiredWall';
+import SubscriptionExpiredWall from '../SubscriptionExpiredWall';
 import { usePlanStore } from '../../store/planStore';
 
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const isTrialExpired = usePlanStore((s) => s.isTrialExpired());
-  const isPlanLoaded = usePlanStore((s) => s.isLoaded);
+  const isTrialExpired        = usePlanStore((s) => s.isTrialExpired());
+  const isSubscriptionExpired = usePlanStore((s) => s.isSubscriptionExpired());
+  const isPlanLoaded          = usePlanStore((s) => s.isLoaded);
 
-  if (isPlanLoaded && isTrialExpired) {
-    return <TrialExpiredWall />;
-  }
+  if (isPlanLoaded && isSubscriptionExpired) return <SubscriptionExpiredWall />;
+  if (isPlanLoaded && isTrialExpired)        return <TrialExpiredWall />;
 
   return (
     <div className="flex h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-gray-100">
@@ -41,14 +44,13 @@ export default function AppLayout() {
             <Menu size={22} />
           </button>
           <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-md flex items-center justify-center shrink-0" style={{ background: 'linear-gradient(135deg, #f97316, #dc2626)' }}>
-              <span className="text-[9px] font-black text-white tracking-tight">FRL</span>
-            </div>
+            <BrandTile className="w-6 h-6 rounded-md" />
             <span className="text-sm font-bold text-gray-900 dark:text-gray-100">Full Range Lab</span>
           </div>
         </header>
 
         <TrialBanner />
+        <RenewalBanner />
         <main className="flex-1 overflow-auto bg-gray-50 dark:bg-gray-950 p-4 md:p-6">
           <div className="max-w-6xl mx-auto">
             <Outlet />

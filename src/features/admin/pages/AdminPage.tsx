@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import {
-  Shield, Users, UserCheck,
+  Shield, Users, UserCheck, Receipt,
   Pencil, Trash2, RefreshCw, Check, X, ChevronDown,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
@@ -8,6 +8,13 @@ import { useUserStore } from '../../../store/userStore';
 import type { UserRole } from '../../../store/userStore';
 import { useToastStore } from '../../../store/toastStore';
 import { useConfirmStore } from '../../../store/confirmStore';
+import {
+  listAllPaymentProofs,
+  signPaymentProofUrl,
+  approvePaymentProof,
+  rejectPaymentProof,
+} from '../../../store/paymentProofStore';
+import type { PaymentProof } from '../../../types';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -45,7 +52,7 @@ interface AdminClient {
   createdAt: string;
 }
 
-type Tab = 'users' | 'clients';
+type Tab = 'users' | 'clients' | 'payments';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -276,6 +283,19 @@ function UsersTab({ isSuperAdmin, isStaff }: { isSuperAdmin: boolean; isStaff: b
     await upsertSub(u.id, { current_period_end: value || null });
   }
 
+  // Extend the paid-through date by N days. If the current period is already in
+  // the future, stack the renewal on top of it so we don't accidentally shorten
+  // a customer's window. Otherwise extend from today.
+  async function handleExtend(u: UnifiedUser, days: number) {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const current = u.currentPeriodEnd ? new Date(u.currentPeriodEnd) : null;
+    const base = current && current > today ? current : today;
+    const next = new Date(base);
+    next.setDate(next.getDate() + days);
+    await upsertSub(u.id, { current_period_end: next.toISOString() });
+  }
+
   if (loading) return <Loader />;
 
   return (
@@ -399,7 +419,21 @@ function UsersTab({ isSuperAdmin, isStaff }: { isSuperAdmin: boolean; isStaff: b
                   {canManage && (
                     <td className="px-4 py-3">
                       {u.subId && (
-                        <div className="flex items-center gap-1">
+                        <div className="flex items-center flex-wrap gap-1">
+                          <button
+                            onClick={() => handleExtend(u, 30)}
+                            title="Extend paid period by 30 days"
+                            className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors font-semibold"
+                          >
+                            +30d
+                          </button>
+                          <button
+                            onClick={() => handleExtend(u, 365)}
+                            title="Extend paid period by 1 year"
+                            className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors font-semibold"
+                          >
+                            +1y
+                          </button>
                           <button
                             onClick={() => upsertSub(u.id, { trial_started_at: new Date().toISOString() })}
                             title="Reset trial to today"
@@ -575,8 +609,9 @@ function Loader() {
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 const TABS: { id: Tab; label: string; icon: React.ElementType }[] = [
-  { id: 'users',   label: 'Users',       icon: Users },
-  { id: 'clients', label: 'All Clients', icon: UserCheck },
+  { id: 'users',    label: 'Users',       icon: Users     },
+  { id: 'clients',  label: 'All Clients', icon: UserCheck },
+  { id: 'payments', label: 'Payments',    icon: Receipt   },
 ];
 
 export default function AdminPage() {
@@ -638,9 +673,225 @@ export default function AdminPage() {
       </div>
 
       {/* Tab content */}
-      {tab === 'users'   && <UsersTab   isSuperAdmin={isSuperAdmin} isStaff={isStaff} />}
-      {tab === 'clients' && <ClientsTab isSuperAdmin={isSuperAdmin} isStaff={isStaff} />}
+      {tab === 'users'    && <UsersTab    isSuperAdmin={isSuperAdmin} isStaff={isStaff} />}
+      {tab === 'clients'  && <ClientsTab  isSuperAdmin={isSuperAdmin} isStaff={isStaff} />}
+      {tab === 'payments' && <PaymentsTab />}
 
+    </div>
+  );
+}
+
+// ── Payments Tab ──────────────────────────────────────────────────────────────
+
+const PLAN_DAYS: Record<'pro_monthly' | 'pro_yearly', number> = {
+  pro_monthly: 30,
+  pro_yearly:  365,
+};
+
+function PaymentsTab() {
+  const [proofs, setProofs] = useState<PaymentProof[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [profileMap, setProfileMap] = useState<Map<string, string | null>>(new Map());
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [actionId, setActionId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<'pending' | 'all'>('pending');
+  const showToast = useToastStore((s) => s.showToast);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    const [list, profileRes] = await Promise.all([
+      listAllPaymentProofs(),
+      supabase.from('user_profiles').select('id, display_name'),
+    ]);
+    setProofs(list);
+    setProfileMap(new Map((profileRes.data ?? []).map((p) => [p.id, p.display_name])));
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  async function openPreview(p: PaymentProof) {
+    const url = await signPaymentProofUrl(p.storagePath);
+    if (!url) {
+      showToast('Could not load receipt.', 'error');
+      return;
+    }
+    setPreviewUrl(url);
+  }
+
+  // Approve. Stack on top of the user's existing paid window if it's still in the
+  // future, so a renewal paid early doesn't shorten the remaining time.
+  async function approve(p: PaymentProof) {
+    setActionId(p.id);
+    try {
+      const { data: subRow } = await supabase
+        .from('subscriptions')
+        .select('current_period_end')
+        .eq('user_id', p.userId)
+        .maybeSingle();
+      const today = new Date(); today.setHours(0, 0, 0, 0);
+      const existing = subRow?.current_period_end ? new Date(subRow.current_period_end) : null;
+      const base = existing && existing > today ? existing : today;
+      const next = new Date(base);
+      next.setDate(next.getDate() + PLAN_DAYS[p.requestedPlan]);
+      await approvePaymentProof(p.id, next.toISOString(), null);
+      showToast('Payment approved.', 'success');
+      await load();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Approval failed.', 'error');
+    } finally {
+      setActionId(null);
+    }
+  }
+
+  async function reject(p: PaymentProof) {
+    const note = window.prompt('Reason for rejection (shown to the trainer):', '');
+    if (note === null) return;
+    setActionId(p.id);
+    try {
+      await rejectPaymentProof(p.id, note.trim() || null);
+      showToast('Payment rejected.', 'success');
+      await load();
+    } catch (err) {
+      showToast(err instanceof Error ? err.message : 'Rejection failed.', 'error');
+    } finally {
+      setActionId(null);
+    }
+  }
+
+  if (loading) return <Loader />;
+
+  const visible = filter === 'pending' ? proofs.filter((p) => p.status === 'pending') : proofs;
+  const pendingCount = proofs.filter((p) => p.status === 'pending').length;
+
+  return (
+    <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+      <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-gray-100 dark:border-gray-700/50 bg-gray-50/60 dark:bg-gray-800/40">
+        <div className="flex items-center gap-1 text-xs">
+          <button
+            onClick={() => setFilter('pending')}
+            className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+              filter === 'pending'
+                ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            }`}>
+            Pending {pendingCount > 0 && `(${pendingCount})`}
+          </button>
+          <button
+            onClick={() => setFilter('all')}
+            className={`px-2.5 py-1 rounded-md font-medium transition-colors ${
+              filter === 'all'
+                ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200'
+                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            }`}>
+            All
+          </button>
+        </div>
+        <button
+          onClick={load}
+          className="flex items-center gap-1.5 text-xs text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+          <RefreshCw size={12} /> Refresh
+        </button>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700">
+            <tr>
+              <Th>Trainer</Th>
+              <Th>Method</Th>
+              <Th>Amount</Th>
+              <Th>Plan</Th>
+              <Th>Reference</Th>
+              <Th>Submitted</Th>
+              <Th>Status</Th>
+              <Th>Actions</Th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+            {visible.map((p) => {
+              const trainerName = profileMap.get(p.userId) ?? p.userId.slice(0, 8) + '…';
+              const busy = actionId === p.id;
+              return (
+                <tr key={p.id} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition-colors">
+                  <td className="px-4 py-3 font-medium text-gray-900 dark:text-gray-100">{trainerName}</td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                    {p.method === 'vodafone_cash' ? 'Vodafone Cash' : p.method === 'instapay' ? 'Instapay' : 'Other'}
+                  </td>
+                  <td className="px-4 py-3 text-gray-600 dark:text-gray-300 whitespace-nowrap">
+                    {p.amountPaid != null ? `${p.amountPaid} EGP` : '—'}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <PlanBadge plan={p.requestedPlan} />
+                  </td>
+                  <td className="px-4 py-3 text-gray-500 dark:text-gray-400 max-w-xs truncate" title={p.referenceNote ?? ''}>
+                    {p.referenceNote || '—'}
+                  </td>
+                  <td className="px-4 py-3 text-gray-400 dark:text-gray-500 whitespace-nowrap text-xs">{fmt(p.createdAt)}</td>
+                  <td className="px-4 py-3">
+                    <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${
+                      p.status === 'pending'  ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' :
+                      p.status === 'approved' ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' :
+                                                 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
+                    }`}>
+                      {p.status}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => openPreview(p)}
+                        title="View receipt"
+                        className="text-[11px] px-2 py-1 rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600">
+                        View
+                      </button>
+                      {p.status === 'pending' && (
+                        <>
+                          <button
+                            onClick={() => approve(p)}
+                            disabled={busy}
+                            className="text-[11px] px-2 py-1 rounded bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 font-semibold disabled:opacity-50">
+                            <Check size={11} className="inline -mt-0.5" /> Approve
+                          </button>
+                          <button
+                            onClick={() => reject(p)}
+                            disabled={busy}
+                            className="text-[11px] px-2 py-1 rounded bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 hover:bg-red-100 dark:hover:bg-red-900/40 font-semibold disabled:opacity-50">
+                            <X size={11} className="inline -mt-0.5" /> Reject
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+            {visible.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
+                  {filter === 'pending' ? 'No pending payments.' : 'No payments yet.'}
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {previewUrl && (
+        <div className="fixed inset-0 bg-black/85 z-50 flex items-center justify-center p-4" onClick={() => setPreviewUrl(null)}>
+          <div className="relative max-w-4xl max-h-full" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setPreviewUrl(null)}
+              className="absolute top-2 right-2 z-10 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white">
+              <X size={16} />
+            </button>
+            {/\.pdf($|\?)/i.test(previewUrl) ? (
+              <iframe src={previewUrl} className="w-[80vw] h-[85vh] rounded-lg bg-white" title="Receipt" />
+            ) : (
+              <img src={previewUrl} alt="Receipt" className="max-w-full max-h-[85vh] object-contain rounded-lg" />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

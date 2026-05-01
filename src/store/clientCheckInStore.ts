@@ -22,7 +22,8 @@ export const useClientCheckInStore = create<ClientCheckInStore>((set, get) => ({
         .from('client_check_ins')
         .select('*')
         .eq('client_id', clientId)
-        .order('date', { ascending: false });
+        .order('date', { ascending: false })
+        .order('created_at', { ascending: false });
       if (error) throw error;
       set({ checkIns: (data ?? []).map(dbRowToClientCheckIn), isLoaded: true });
     } catch {

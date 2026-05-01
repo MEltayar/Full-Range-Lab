@@ -3,6 +3,7 @@ import { UsersRound, Activity, CalendarDays } from 'lucide-react';
 import { useClientStore } from '../../../store/clientStore';
 import { useProgramStore } from '../../../store/programStore';
 import { usePlanStore } from '../../../store/planStore';
+import { useClientActivityStore } from '../../../store/clientActivityStore';
 import { useToastStore } from '../../../store/toastStore';
 import { useConfirmStore } from '../../../store/confirmStore';
 import { LockedButton } from '../../../components/UpgradeLock';
@@ -25,6 +26,9 @@ export default function ClientsPage() {
   const initializePrograms = useProgramStore((s) => s.initializeFromDB);
   const programs = useProgramStore((s) => s.programs);
 
+  const loadActivity     = useClientActivityStore((s) => s.load);
+  const recentClientIds  = useClientActivityStore((s) => s.recentClientIds);
+
   const clients = useMemo(() => {
     const term = searchTerm.trim().toLowerCase();
     const filtered = term ? allClients.filter((c) => c.name.toLowerCase().includes(term)) : allClients;
@@ -37,7 +41,8 @@ export default function ClientsPage() {
   useEffect(() => {
     initializeFromDB();
     initializePrograms();
-  }, [initializeFromDB, initializePrograms]);
+    loadActivity();
+  }, [initializeFromDB, initializePrograms, loadActivity]);
 
   // ── Stats ─────────────────────────────────────────────────
   const programCountByClient = useMemo(() => {
@@ -152,6 +157,7 @@ export default function ClientsPage() {
             searchTerm={searchTerm}
             programCountByClient={programCountByClient}
             activeClientIds={activeClientIds}
+            recentlyActiveClientIds={recentClientIds}
             onEdit={handleEdit}
             onDelete={handleDelete}
           />

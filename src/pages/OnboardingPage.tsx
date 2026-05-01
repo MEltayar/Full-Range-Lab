@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSettingsStore } from '../store/settingsStore';
+import { BrandTile } from '../components/Brand';
 import type { ProfileType } from '../types';
 
 function seeded(n: number) { const x = Math.sin(n + 1) * 10000; return x - Math.floor(x); }
@@ -77,9 +78,8 @@ export default function OnboardingPage() {
 
         {/* Brand */}
         <div className="flex flex-col items-center gap-4">
-          <div className="w-16 h-16 rounded-2xl flex items-center justify-center"
-            style={{ background: 'linear-gradient(135deg, #f97316, #dc2626)', animation: 'ob-logo-pulse 3s ease-in-out infinite' }}>
-            <span className="text-xl font-black text-white tracking-tight">FRL</span>
+          <div className="rounded-2xl overflow-hidden" style={{ animation: 'ob-logo-pulse 3s ease-in-out infinite' }}>
+            <BrandTile className="w-16 h-16 rounded-2xl" />
           </div>
           <div className="text-center">
             <h1 className="text-3xl font-black text-white tracking-tight drop-shadow-lg">Full Range Lab</h1>
@@ -97,36 +97,6 @@ export default function OnboardingPage() {
 
         {/* Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 w-full">
-
-          {/* Physiotherapist */}
-          <button
-            onClick={() => !saving && handleSelect('physio')}
-            disabled={saving}
-            className="group relative flex flex-col items-start gap-4 p-6 rounded-2xl border-2 text-left transition-all duration-200"
-            style={{
-              background: selected === 'physio' ? 'rgba(20,184,166,0.18)' : 'rgba(10,5,2,0.55)',
-              borderColor: selected === 'physio' ? '#2dd4bf' : 'rgba(255,255,255,0.10)',
-              backdropFilter: 'blur(16px)',
-              boxShadow: selected === 'physio' ? '0 8px 32px rgba(20,184,166,0.25)' : '0 8px 32px rgba(0,0,0,0.4)',
-              transform: selected === 'physio' ? 'scale(1.02)' : undefined,
-            }}
-          >
-            <div className="text-5xl">🩺</div>
-            <div>
-              <p className="text-lg font-bold text-white">Physiotherapist</p>
-              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.40)' }}>Rehab Specialist · Occupational Therapist · Sports Therapist</p>
-            </div>
-            <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>
-              I assess and treat patients, prescribe rehabilitation programs, and guide recovery from injury or surgery.
-            </p>
-            <div className="mt-auto w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-all"
-              style={{
-                background: selected === 'physio' ? '#14b8a6' : 'rgba(255,255,255,0.08)',
-                color: selected === 'physio' ? '#fff' : 'rgba(255,255,255,0.60)',
-              }}>
-              {selected === 'physio' && saving ? 'Setting up…' : 'Select'}
-            </div>
-          </button>
 
           {/* Personal Trainer */}
           <button
@@ -155,6 +125,36 @@ export default function OnboardingPage() {
                 color: selected === 'gym' ? '#fff' : 'rgba(255,255,255,0.60)',
               }}>
               {selected === 'gym' && saving ? 'Setting up…' : 'Select'}
+            </div>
+          </button>
+
+          {/* Physiotherapist */}
+          <button
+            onClick={() => !saving && handleSelect('physio')}
+            disabled={saving}
+            className="group relative flex flex-col items-start gap-4 p-6 rounded-2xl border-2 text-left transition-all duration-200"
+            style={{
+              background: selected === 'physio' ? 'rgba(20,184,166,0.18)' : 'rgba(10,5,2,0.55)',
+              borderColor: selected === 'physio' ? '#2dd4bf' : 'rgba(255,255,255,0.10)',
+              backdropFilter: 'blur(16px)',
+              boxShadow: selected === 'physio' ? '0 8px 32px rgba(20,184,166,0.25)' : '0 8px 32px rgba(0,0,0,0.4)',
+              transform: selected === 'physio' ? 'scale(1.02)' : undefined,
+            }}
+          >
+            <div className="text-5xl">🩺</div>
+            <div>
+              <p className="text-lg font-bold text-white">Physiotherapist</p>
+              <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.40)' }}>Rehab Specialist · Occupational Therapist · Sports Therapist</p>
+            </div>
+            <p className="text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.65)' }}>
+              I assess and treat patients, prescribe rehabilitation programs, and guide recovery from injury or surgery.
+            </p>
+            <div className="mt-auto w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-all"
+              style={{
+                background: selected === 'physio' ? '#14b8a6' : 'rgba(255,255,255,0.08)',
+                color: selected === 'physio' ? '#fff' : 'rgba(255,255,255,0.60)',
+              }}>
+              {selected === 'physio' && saving ? 'Setting up…' : 'Select'}
             </div>
           </button>
         </div>

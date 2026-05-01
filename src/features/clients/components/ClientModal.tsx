@@ -33,8 +33,12 @@ export default function ClientModal({ client, isOpen, onClose, onSave }: ClientM
   const [medicalHistory, setMedicalHistory] = useState('');
   const [foodPreferences, setFoodPreferences] = useState('');
   const [foodDislikes, setFoodDislikes]   = useState('');
+  const [exercisePreferences, setExercisePreferences] = useState('');
+  const [exerciseDislikes, setExerciseDislikes] = useState('');
+  const [allergies, setAllergies]         = useState('');
   const [healthAlerts, setHealthAlerts]   = useState('');
   const [generalNotes, setGeneralNotes]   = useState('');
+  const [trainerMessage, setTrainerMessage] = useState('');
 
   const [nameError, setNameError]   = useState('');
   const [ageError, setAgeError]     = useState('');
@@ -55,8 +59,12 @@ export default function ClientModal({ client, isOpen, onClose, onSave }: ClientM
       setMedicalHistory(client?.medicalHistory ?? '');
       setFoodPreferences(client?.foodPreferences ?? '');
       setFoodDislikes(client?.foodDislikes ?? '');
+      setExercisePreferences(client?.exercisePreferences ?? '');
+      setExerciseDislikes(client?.exerciseDislikes ?? '');
+      setAllergies(client?.allergies ?? '');
       setHealthAlerts(client?.healthAlerts ?? '');
       setGeneralNotes(client?.generalNotes ?? '');
+      setTrainerMessage(client?.trainerMessage ?? '');
       setNameError(''); setAgeError(''); setEmailError('');
       setTimeout(() => nameInputRef.current?.focus(), 50);
     }
@@ -106,8 +114,12 @@ export default function ClientModal({ client, isOpen, onClose, onSave }: ClientM
       medicalHistory: medicalHistory.trim() || undefined,
       foodPreferences: foodPreferences.trim() || undefined,
       foodDislikes: foodDislikes.trim() || undefined,
+      exercisePreferences: exercisePreferences.trim() || undefined,
+      exerciseDislikes: exerciseDislikes.trim() || undefined,
+      allergies: allergies.trim() || undefined,
       healthAlerts: healthAlerts.trim() || undefined,
       generalNotes: generalNotes.trim() || undefined,
+      trainerMessage: trainerMessage.trim() || undefined,
     });
   }
 
@@ -172,8 +184,21 @@ export default function ClientModal({ client, isOpen, onClose, onSave }: ClientM
               </div>
             </div>
 
+            {/* ── Message to client (public — shown on portal) ── */}
+            <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wide">Message to Client</p>
+            <div className="flex flex-col gap-1">
+              <label className={LABEL}>Visible on the client's portal <span className={HINT}>(short note, encouragement, weekly focus…)</span></label>
+              <textarea
+                value={trainerMessage}
+                onChange={(e) => setTrainerMessage(e.target.value)}
+                className={`${TEXTAREA} border-emerald-300 dark:border-emerald-700 focus:ring-emerald-500`}
+                rows={2}
+                placeholder="e.g. Great work last week — focus on form over weight in this block."
+              />
+            </div>
+
             {/* ── Trainer notes ── */}
-            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Trainer Notes</p>
+            <p className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Trainer Notes <span className="normal-case font-normal text-gray-400">(private — never shown to the client)</span></p>
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-1">
                 <label className={LABEL}>Medical History <span className={HINT}>(injuries, conditions)</span></label>
@@ -186,6 +211,18 @@ export default function ClientModal({ client, isOpen, onClose, onSave }: ClientM
               <div className="flex flex-col gap-1">
                 <label className={LABEL}>Food Dislikes <span className={HINT}>(what to avoid)</span></label>
                 <textarea value={foodDislikes} onChange={(e) => setFoodDislikes(e.target.value)} className={TEXTAREA} rows={2} placeholder="e.g. Does not eat dairy, avoids red meat..." />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={LABEL}>Exercise Preferences <span className={HINT}>(what they enjoy)</span></label>
+                <textarea value={exercisePreferences} onChange={(e) => setExercisePreferences(e.target.value)} className={TEXTAREA} rows={2} placeholder="e.g. Loves deadlifts, enjoys yoga..." />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={LABEL}>Exercise Dislikes <span className={HINT}>(what to avoid)</span></label>
+                <textarea value={exerciseDislikes} onChange={(e) => setExerciseDislikes(e.target.value)} className={TEXTAREA} rows={2} placeholder="e.g. Hates running, no overhead pressing..." />
+              </div>
+              <div className="flex flex-col gap-1">
+                <label className={LABEL}>Allergies <span className={HINT}>(food, environment, etc.)</span></label>
+                <textarea value={allergies} onChange={(e) => setAllergies(e.target.value)} className={TEXTAREA} rows={2} placeholder="e.g. Peanuts, shellfish, latex..." />
               </div>
               <div className="flex flex-col gap-1">
                 <label className={LABEL}>Health Alerts <span className={HINT}>(important flags)</span></label>

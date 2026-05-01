@@ -33,6 +33,7 @@ export default function ProgramBuilderPage() {
   const setDraftField = useProgramStore((s) => s.setDraftField);
   const addSession = useProgramStore((s) => s.addSession);
   const updateSessionLabel = useProgramStore((s) => s.updateSessionLabel);
+  const updateSessionDayOfWeek = useProgramStore((s) => s.updateSessionDayOfWeek);
   const deleteSession = useProgramStore((s) => s.deleteSession);
   const addExerciseToSession = useProgramStore((s) => s.addExerciseToSession);
   const updateExerciseParams = useProgramStore((s) => s.updateExerciseParams);
@@ -300,6 +301,7 @@ export default function ProgramBuilderPage() {
         <SessionList
           sessions={draft.sessions}
           onUpdateLabel={updateSessionLabel}
+          onUpdateDayOfWeek={updateSessionDayOfWeek}
           onDeleteSession={deleteSession}
           onAddExercise={(sessionId) => {
             setActiveSessionId(sessionId);

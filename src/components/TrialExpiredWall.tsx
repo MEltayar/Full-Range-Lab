@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
+import { BrandTile } from './Brand';
 
 export default function TrialExpiredWall() {
   const signOut  = useAuthStore((s) => s.signOut);
@@ -41,7 +42,9 @@ export default function TrialExpiredWall() {
         <div className="rounded-2xl border border-white/10 backdrop-blur-2xl p-8"
           style={{ background: 'rgba(10,5,2,0.70)', boxShadow: '0 32px 80px rgba(0,0,0,0.65)' }}>
 
-          <div className="text-5xl mb-5">⏰</div>
+          <div className="flex justify-center mb-5">
+            <BrandTile className="w-14 h-14 rounded-2xl shadow-2xl" />
+          </div>
 
           <h1 className="text-2xl font-black text-white mb-2 tracking-tight">Your free trial has ended</h1>
           <p className="text-sm mb-8 leading-relaxed" style={{ color: 'rgba(255,255,255,0.50)' }}>

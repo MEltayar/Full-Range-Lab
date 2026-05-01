@@ -1,7 +1,12 @@
+import { useEffect, useState } from 'react';
 import { Check, Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { usePlanStore } from '../store/planStore';
+import { usePaymentProofStore } from '../store/paymentProofStore';
+import { BrandTile } from '../components/Brand';
+import ProofForm from '../components/ProofForm';
+import { CONTACT_NUMBER, whatsappLink } from '../lib/paymentConfig';
 
 function seeded(n: number) { const x = Math.sin(n + 1) * 10000; return x - Math.floor(x); }
 
@@ -10,14 +15,6 @@ const GYM_ICONS = [
   '⚡', '🔥', '🏆', '🥇', '🧘‍♂️', '🏃‍♂️', '🦾',
   '🩺', '❤️‍🔥', '🏇', '🤸‍♂️', '🚴‍♂️', '🧗‍♂️',
 ];
-
-const CONTACT_NUMBER = '+201021751325';
-const WHATSAPP_BASE = `https://wa.me/201021751325?text=`;
-
-function whatsappLink(plan: string) {
-  const msg = encodeURIComponent(`Hi, I'd like to upgrade to Full Range Lab ${plan}. Please let me know how to complete the payment.`);
-  return `${WHATSAPP_BASE}${msg}`;
-}
 
 const trialFeatures = [
   '2 clients',
@@ -31,12 +28,19 @@ const monthlyFeatures = [
   'Full exercise library + custom exercises',
   'PDF export',
   'Diet plans & food library',
+  'Branded client portal — up to 30 invites',
   'Clinic branding & configuration',
   'Save custom templates',
 ];
 
 const yearlyFeatures = [
-  ...monthlyFeatures,
+  'Unlimited clients & programs',
+  'Full exercise library + custom exercises',
+  'PDF export',
+  'Diet plans & food library',
+  'Branded client portal — unlimited invites',
+  'Clinic branding & configuration',
+  'Save custom templates',
   'Excel export',
   'WhatsApp & Email sharing',
   'Client analytics',
@@ -44,6 +48,7 @@ const yearlyFeatures = [
 ];
 
 const yearlyExclusiveIds = new Set([
+  'Branded client portal — unlimited invites',
   'Excel export',
   'WhatsApp & Email sharing',
   'Client analytics',
@@ -54,6 +59,18 @@ export default function PricingPage() {
   const user = useAuthStore((s) => s.user);
   const subscription = usePlanStore((s) => s.subscription);
   const currentPlan = subscription?.plan ?? 'trial';
+
+  const myProofs     = usePaymentProofStore((s) => s.myProofs);
+  const loadMyProofs = usePaymentProofStore((s) => s.loadMine);
+  const submitProof  = usePaymentProofStore((s) => s.submit);
+
+  const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => { if (user) void loadMyProofs(); }, [user, loadMyProofs]);
+
+  const pendingProof = myProofs.find((p) => p.status === 'pending');
+  const lastRejected = myProofs.find((p) => p.status === 'rejected');
+  const isOnPaidPlan = currentPlan === 'pro_monthly' || currentPlan === 'pro_yearly';
 
   const fallers = Array.from({ length: 22 }, (_, i) => ({
     id: i,
@@ -114,14 +131,11 @@ export default function PricingPage() {
         {/* Header */}
         <div className="text-center mb-12">
           <div className="flex justify-center mb-5">
-            <div className="w-14 h-14 rounded-2xl flex items-center justify-center"
-              style={{ background: 'linear-gradient(135deg, #f97316, #dc2626)', boxShadow: '0 8px 32px rgba(249,115,22,0.45)' }}>
-              <span className="text-lg font-black text-white tracking-tight">FRL</span>
-            </div>
+            <BrandTile className="w-14 h-14 rounded-2xl shadow-2xl" />
           </div>
           <h1 className="text-3xl font-black text-white tracking-tight">Simple, transparent pricing</h1>
           <p className="mt-3 text-base font-medium" style={{ color: 'rgba(253,186,116,0.70)' }}>
-            Start free for 3 days — no credit card required.
+            Start free for 14 days — no credit card required.
           </p>
         </div>
 
@@ -133,7 +147,7 @@ export default function PricingPage() {
             <div className="mb-5">
               <p className="text-xs font-bold text-white/40 uppercase tracking-widest">Free Trial</p>
               <p className="text-4xl font-black text-white mt-2">Free</p>
-              <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.40)' }}>3 days · no card needed</p>
+              <p className="text-sm mt-1" style={{ color: 'rgba(255,255,255,0.40)' }}>14 days · no card needed</p>
             </div>
             <ul className="flex flex-col gap-2.5 flex-1 mb-6">
               {trialFeatures.map((f) => (
@@ -156,7 +170,7 @@ export default function PricingPage() {
               </div>
             ) : (
               <div className="w-full text-center py-2.5 text-sm rounded-xl" style={{ color: 'rgba(255,255,255,0.30)' }}>
-                Expired after 3 days
+                Expired after 14 days
               </div>
             )}
           </div>
@@ -265,7 +279,7 @@ export default function PricingPage() {
             <li className="flex items-start gap-3">
               <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-black text-white shrink-0 mt-0.5"
                 style={{ background: 'linear-gradient(135deg, #f97316, #dc2626)' }}>3</span>
-              Send us a screenshot of the transfer on WhatsApp
+              <span>Upload the receipt screenshot below — or send it to us on WhatsApp</span>
             </li>
             <li className="flex items-start gap-3">
               <span className="w-5 h-5 rounded-full flex items-center justify-center text-xs font-black text-white shrink-0 mt-0.5"
@@ -274,6 +288,51 @@ export default function PricingPage() {
             </li>
           </ol>
         </div>
+
+        {/* Upload payment receipt — self-serve alternative to WhatsApp */}
+        {user && !isOnPaidPlan && (
+          <div className="mt-6 rounded-2xl border border-white/10 p-7" style={{ ...cardBase, background: 'rgba(10,5,2,0.60)' }}>
+            <div className="flex items-baseline justify-between gap-3 mb-4">
+              <h2 className="text-base font-bold text-white">Upload payment receipt</h2>
+              <span className="text-[11px] uppercase tracking-wider font-semibold" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                Self-serve
+              </span>
+            </div>
+
+            {pendingProof ? (
+              <div className="text-left rounded-xl border border-amber-400/30 p-4"
+                style={{ background: 'rgba(245,158,11,0.10)' }}>
+                <p className="text-xs font-semibold text-amber-300 mb-1">Receipt received — under review</p>
+                <p className="text-[11px] leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  Submitted {new Date(pendingProof.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}.
+                  We usually activate within a few hours.
+                </p>
+              </div>
+            ) : showForm ? (
+              <ProofForm
+                onCancel={() => setShowForm(false)}
+                onSubmit={async (args) => { await submitProof(args); setShowForm(false); }}
+              />
+            ) : (
+              <>
+                <p className="text-sm mb-4" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                  Already paid? Attach the transfer screenshot here and we'll activate your account.
+                </p>
+                <button
+                  onClick={() => setShowForm(true)}
+                  className="pp-cta w-full text-center py-2.5 text-white text-sm font-bold rounded-xl">
+                  Upload receipt
+                </button>
+              </>
+            )}
+
+            {lastRejected && !pendingProof && !showForm && (
+              <p className="text-[11px] leading-relaxed mt-3" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                Last submission was rejected{lastRejected.adminNotes ? ` — ${lastRejected.adminNotes}` : '.'} Try again with a clearer receipt.
+              </p>
+            )}
+          </div>
+        )}
 
         {/* CTA button */}
         <div className="text-center mt-10">

@@ -15,6 +15,7 @@ import {
   Shield,
 } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
+import { BrandTile } from '../Brand';
 import { useAuthStore } from '../../store/authStore';
 import { usePlanStore } from '../../store/planStore';
 import { useSettingsStore } from '../../store/settingsStore';
@@ -86,9 +87,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Header */}
       <div className="mb-6 px-2 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0 shadow-lg" style={{ background: 'linear-gradient(135deg, #f97316, #dc2626)', boxShadow: '0 4px 12px rgba(249,115,22,0.4)' }}>
-            <span className="text-[10px] font-black text-white tracking-tight">FRL</span>
-          </div>
+          <BrandTile className="w-8 h-8 rounded-xl shadow-lg" />
           <div>
             <p className="text-sm font-bold tracking-tight text-white leading-none">Full Range Lab</p>
             <p className="text-[10px] text-orange-300 mt-0.5 font-medium tracking-wide">{isGym ? 'Personal Training' : 'Physiotherapy'}</p>
