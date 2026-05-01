@@ -247,23 +247,23 @@ function Nav() {
         borderBottom: scrolled ? '1px solid rgba(255,255,255,0.06)' : '1px solid transparent',
       }}>
       <div className="max-w-7xl mx-auto px-5 sm:px-8 py-4 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3">
-          <BrandTile className="w-10 h-10 rounded-xl shadow-lg" />
-          <div>
-            <div className="text-base font-bold tracking-tight">Full Range Lab</div>
-            <div className="text-[11px] text-orange-300/70 -mt-0.5 font-semibold">Move better. Train smarter.</div>
+        <Link to="/" className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <BrandTile className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-lg shrink-0" />
+          <div className="min-w-0">
+            <div className="text-sm sm:text-base font-bold tracking-tight truncate">Full Range Lab</div>
+            <div className="hidden sm:block text-[11px] text-orange-300/70 -mt-0.5 font-semibold">Move better. Train smarter.</div>
           </div>
         </Link>
 
-        <nav className="flex items-center gap-2 sm:gap-3">
+        <nav className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           <a href="#features" className="hidden md:inline-block text-sm text-white/55 hover:text-white px-3 py-2 transition-colors">Features</a>
           <a href="#client-portal" className="hidden md:inline-block text-sm text-white/55 hover:text-white px-3 py-2 transition-colors">Client portal</a>
           <Link to="/pricing" className="hidden sm:inline-block text-sm text-white/55 hover:text-white px-3 py-2 transition-colors">Pricing</Link>
           <Link to="/login"
-            className="text-sm text-white/85 hover:text-white px-3 sm:px-4 py-2 rounded-lg border border-white/10 hover:border-white/25 transition-colors">
+            className="text-xs sm:text-sm whitespace-nowrap text-white/85 hover:text-white px-3 sm:px-4 py-2 rounded-lg border border-white/10 hover:border-white/25 transition-colors">
             Sign in
           </Link>
-          <Link to="/signup" className="lp-cta text-sm font-semibold px-4 py-2 rounded-lg text-white">
+          <Link to="/signup" className="lp-cta text-xs sm:text-sm whitespace-nowrap font-semibold px-3 sm:px-4 py-2 rounded-lg text-white">
             Get started
           </Link>
         </nav>
