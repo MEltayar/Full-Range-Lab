@@ -105,8 +105,8 @@ export default function ClientsPage() {
     <div className="flex flex-col gap-5">
 
       {/* ── Page header ── */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
+        <div className="min-w-0">
           <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">Clients</h1>
           <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">Track and manage your client roster.</p>
         </div>
@@ -114,7 +114,7 @@ export default function ClientsPage() {
           locked={addBlocked}
           feature="unlimited clients"
           onClick={() => { setSelectedClient(null); setModalOpen(true); }}
-          className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors shrink-0"
+          className="px-4 py-2.5 bg-orange-500 hover:bg-orange-600 text-white text-sm font-semibold rounded-lg shadow-sm transition-colors shrink-0 self-start sm:self-auto"
         >
           + Add Client
         </LockedButton>
@@ -131,13 +131,13 @@ export default function ClientsPage() {
               { icon: Activity,   value: activeClientIds.size, label: 'Active programs' },
               { icon: CalendarDays, value: newThisMonth,      label: 'New this month'  },
             ].map(({ icon: Icon, value, label }) => (
-              <div key={label} className="flex items-center gap-3 px-5 py-4">
-                <div className="w-9 h-9 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0">
-                  <Icon size={16} className="text-orange-500 dark:text-orange-400" />
+              <div key={label} className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-4 text-center sm:text-left items-center">
+                <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-xl bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center shrink-0">
+                  <Icon size={15} className="text-orange-500 dark:text-orange-400" />
                 </div>
-                <div className="flex flex-col justify-center">
-                  <p className="text-xl font-bold text-gray-900 dark:text-gray-100 leading-tight">{value}</p>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">{label}</p>
+                <div className="flex flex-col justify-center min-w-0">
+                  <p className="text-lg sm:text-xl font-bold text-gray-900 dark:text-gray-100 leading-tight">{value}</p>
+                  <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 leading-tight">{label}</p>
                 </div>
               </div>
             ))}
