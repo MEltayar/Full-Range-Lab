@@ -78,7 +78,10 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
 
   updatePassword: async (newPassword: string) => {
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+      data: { password_set: true },
+    });
     if (error) throw error;
   },
 }));

@@ -1,9 +1,12 @@
-import { useEffect, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect, useState } from 'react';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useSettingsStore } from '../store/settingsStore';
 import { useUserStore } from '../store/userStore';
 import { usePlanStore } from '../store/planStore';
+import { useClientPortalStore } from '../store/clientPortalStore';
+
+const LandingPage = lazy(() => import('../pages/LandingPage'));
 
 const LOAD_TIMEOUT_MS = 10_000;
 
@@ -14,11 +17,25 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   const settingsLoaded  = useSettingsStore((s) => s.isLoaded);
   const userStoreLoaded = useUserStore((s) => s.isLoaded);
   const planStoreLoaded = usePlanStore((s) => s.isLoaded);
+  const linkedClient     = useClientPortalStore((s) => s.linkedClient);
+  const portalLoaded     = useClientPortalStore((s) => s.isLoaded);
+  const loadedForUserId  = useClientPortalStore((s) => s.loadedForUserId);
+  const fetchPortal      = useClientPortalStore((s) => s.fetch);
+  const location         = useLocation();
   const [timedOut, setTimedOut] = useState(false);
+
+  // Cheap one-shot lookup so portal-clients who hit a trainer URL get redirected
+  // away instead of being pushed through onboarding. Refetch when the auth user
+  // changes so we don't read stale data from a previous user's session.
+  useEffect(() => {
+    if (user && loadedForUserId !== user.id) fetchPortal();
+  }, [user, loadedForUserId, fetchPortal]);
+
+  const portalReady = portalLoaded && loadedForUserId === (user?.id ?? null);
 
   // Wait for all stores that affect feature gating — prevents flash of trial UI for admins
   const fullyLoaded = isLoaded && (
-    !user || (settingsLoaded && userStoreLoaded && planStoreLoaded)
+    !user || (settingsLoaded && userStoreLoaded && planStoreLoaded && portalReady)
   );
 
   useEffect(() => {
@@ -55,8 +72,24 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     );
   }
 
-  // No user → login
-  if (!user) return <Navigate to="/login" replace />;
+  // No user → root path shows the public landing page; deeper paths bounce to login
+  if (!user) {
+    if (location.pathname === '/') {
+      return (
+        <Suspense fallback={
+          <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+            <div className="w-8 h-8 border-4 border-gray-200 dark:border-gray-700 border-t-orange-500 rounded-full animate-spin" />
+          </div>
+        }>
+          <LandingPage />
+        </Suspense>
+      );
+    }
+    return <Navigate to="/login" replace />;
+  }
+
+  // Portal client → bounce to client portal
+  if (linkedClient) return <Navigate to="/client" replace />;
 
   // No profile type → onboarding
   if (!profileType) return <Navigate to="/onboarding" replace />;

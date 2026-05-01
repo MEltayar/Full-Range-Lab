@@ -37,3 +37,6 @@ Thumbs.db
 
 # Vite
 .vite/
+
+# Claude Code project-local settings
+.claude/

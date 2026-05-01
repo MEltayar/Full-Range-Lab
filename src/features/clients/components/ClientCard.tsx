@@ -7,6 +7,7 @@ interface ClientCardProps {
   client: Client;
   programCount: number;
   hasActiveProgram: boolean;
+  recentlyActive?: boolean;
   onEdit?: () => void;
   onDelete?: () => void;
 }
@@ -27,9 +28,20 @@ function getAvatarColor(name: string): string {
   return colors[Math.abs(hash) % colors.length];
 }
 
-export default function ClientCard({ client, programCount, hasActiveProgram, onEdit, onDelete }: ClientCardProps) {
+export default function ClientCard({ client, programCount, hasActiveProgram, recentlyActive = false, onEdit, onDelete }: ClientCardProps) {
   const initials = client.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
   const avatarColor = getAvatarColor(client.name);
+
+  // Engagement window pill — only shown when an end date is set.
+  const subPill = (() => {
+    if (!client.subscriptionEndDate) return null;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const end = new Date(`${client.subscriptionEndDate}T00:00:00`);
+    const days = Math.ceil((end.getTime() - today.getTime()) / 86_400_000);
+    if (days < 0) return { text: `Expired ${Math.abs(days)}d ago`, cls: 'bg-rose-100 dark:bg-rose-900/40 text-rose-700 dark:text-rose-300', dot: 'bg-rose-500' };
+    if (days <= 7) return { text: `${days}d left`, cls: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300', dot: 'bg-amber-500' };
+    return null;
+  })();
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPos, setMenuPos] = useState({ top: 0, right: 0 });
   const menuRef = useRef<HTMLDivElement>(null);
@@ -61,8 +73,15 @@ export default function ClientCard({ client, programCount, hasActiveProgram, onE
     <div className="flex items-center gap-4 px-5 py-4 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-xl hover:shadow-md hover:border-gray-200 dark:hover:border-gray-600 transition-all group" style={{ boxShadow: '0 1px 3px 0 rgb(0 0 0 / 0.05)' }}>
 
       {/* Avatar */}
-      <div className={`w-11 h-11 rounded-full bg-gradient-to-br ${avatarColor} flex items-center justify-center shrink-0 shadow-sm`}>
+      <div className={`relative w-11 h-11 rounded-full bg-gradient-to-br ${avatarColor} flex items-center justify-center shrink-0 shadow-sm`}>
         <span className="text-sm font-bold text-white">{initials}</span>
+        {recentlyActive && (
+          <span
+            className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-gray-800"
+            title="Active in the last 7 days"
+            aria-label="Active in the last 7 days"
+          />
+        )}
       </div>
 
       {/* Name + meta */}
@@ -78,6 +97,12 @@ export default function ClientCard({ client, programCount, hasActiveProgram, onE
             <span className="inline-flex items-center gap-1 text-xs font-medium text-emerald-700 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 rounded-full shrink-0">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />
               Active
+            </span>
+          )}
+          {subPill && (
+            <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full shrink-0 ${subPill.cls}`}>
+              <span className={`w-1.5 h-1.5 rounded-full inline-block ${subPill.dot}`} />
+              {subPill.text}
             </span>
           )}
         </div>

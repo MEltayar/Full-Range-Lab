@@ -15,6 +15,7 @@ interface ClientStore {
   addClient: (data: Omit<Client, 'id' | 'createdAt'>) => Promise<void>;
   updateClient: (id: string, data: Partial<Omit<Client, 'id' | 'createdAt'>>) => Promise<void>;
   deleteClient: (id: string) => Promise<void>;
+  inviteClient: (id: string) => Promise<void>;
   setSearchTerm: (term: string) => void;
 
   filteredClients: () => Client[];
@@ -94,6 +95,64 @@ export const useClientStore = create<ClientStore>((set, get) => ({
       console.error('Failed to delete client:', err);
       set({ clients: previous });
       throw err;
+    }
+  },
+
+  inviteClient: async (id) => {
+    const client = get().clients.find((c) => c.id === id);
+    if (!client) throw new Error('Client not found.');
+    if (!client.email || !client.email.trim()) {
+      throw new Error('Add an email to this client before sending an invite.');
+    }
+
+    // Enforce portal-invite cap from the active plan. Resending an invite to
+    // an already-invited client doesn't count toward the cap.
+    const planStore = usePlanStore.getState();
+    const isResend = !!client.invitedAt || !!client.clientUserId;
+    if (!isResend) {
+      const max = planStore.limits().maxClientsInvited;
+      const used = get().clients.filter((c) => !!c.invitedAt || !!c.clientUserId).length;
+      if (used >= max) {
+        if (max === 0) {
+          throw new Error('Client portal is a Pro feature. Upgrade to invite clients.');
+        }
+        throw new Error(`You've reached your plan's portal-invite limit (${max}). Upgrade to invite more.`);
+      }
+    }
+
+    // Stamp invited_at BEFORE sending the OTP. The auth.users INSERT trigger
+    // (link_invited_client) checks invited_at when it fires, so the row must
+    // already be marked as invited or the link silently skips.
+    const previous = get().clients;
+    const previousInvitedAt = client.invitedAt;
+    const invitedAt = new Date().toISOString();
+    set((state) => ({
+      clients: state.clients.map((c) => (c.id === id ? { ...c, invitedAt } : c)),
+    }));
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({ invited_at: invitedAt })
+        .eq('id', id);
+      if (error) throw error;
+    } catch (err) {
+      set({ clients: previous });
+      throw err;
+    }
+
+    const redirectTo = `${window.location.origin}/client`;
+    const { error: otpError } = await supabase.auth.signInWithOtp({
+      email: client.email.trim(),
+      options: { emailRedirectTo: redirectTo, shouldCreateUser: true },
+    });
+    if (otpError) {
+      // OTP failed — roll the stamp back so the trainer can retry cleanly.
+      set({ clients: previous });
+      await supabase
+        .from('clients')
+        .update({ invited_at: previousInvitedAt ?? null })
+        .eq('id', id);
+      throw new Error(otpError.message);
     }
   },
 

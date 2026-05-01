@@ -381,7 +381,7 @@ export default function ProgramPreviewPage() {
       {program.goal && (
         <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl px-5 py-4">
           <p className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-widest mb-1">
-            Rehabilitation Goal
+            Program Goal
           </p>
           <p className="text-sm text-amber-900 dark:text-amber-200 leading-relaxed">
             {program.goal}

@@ -8,13 +8,14 @@ interface ClientListProps {
   searchTerm: string;
   programCountByClient: Map<string, number>;
   activeClientIds: Set<string>;
+  recentlyActiveClientIds?: Set<string>;
   onEdit?: (client: Client) => void;
   onDelete?: (client: Client) => void;
 }
 
 export default function ClientList({
   clients, isLoaded, searchTerm,
-  programCountByClient, activeClientIds,
+  programCountByClient, activeClientIds, recentlyActiveClientIds,
   onEdit, onDelete,
 }: ClientListProps) {
   if (!isLoaded) {
@@ -56,6 +57,7 @@ export default function ClientList({
           client={client}
           programCount={programCountByClient.get(client.id) ?? 0}
           hasActiveProgram={activeClientIds.has(client.id)}
+          recentlyActive={recentlyActiveClientIds?.has(client.id) ?? false}
           onEdit={onEdit ? () => onEdit(client) : undefined}
           onDelete={onDelete ? () => onDelete(client) : undefined}
         />

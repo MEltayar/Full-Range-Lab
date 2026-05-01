@@ -20,6 +20,8 @@ import { useProgramStore } from '../../../store/programStore';
 import { useExerciseStore } from '../../../store/exerciseStore';
 import { useSettingsStore } from '../../../store/settingsStore';
 import { useTemplateStore } from '../../../store/templateStore';
+import { usePlanStore } from '../../../store/planStore';
+import { useUserStore } from '../../../store/userStore';
 import GymFloatAnimation from '../../../components/GymFloatAnimation';
 
 // ── Helpers ───────────────────────────────────────────────
@@ -100,6 +102,12 @@ export default function DashboardPage() {
   const { templates, isLoaded: templatesLoaded, initializeFromDB: initTemplates } = useTemplateStore();
   const { clinicName, clinicLogo, therapistName, profileType, isLoaded: settingsLoaded } = useSettingsStore();
 
+  const subscription   = usePlanStore((s) => s.subscription);
+  const planLoaded     = usePlanStore((s) => s.isLoaded);
+  const trialDaysLeft  = usePlanStore((s) => s.trialDaysLeft());
+  const subDaysLeft    = usePlanStore((s) => s.subscriptionDaysLeft());
+  const userRole       = useUserStore((s) => s.role);
+
   useEffect(() => {
     if (!clientsLoaded)   initClients();
     if (!programsLoaded)  initPrograms();
@@ -147,6 +155,32 @@ export default function DashboardPage() {
       : `${greeting()}, Dr. ${therapistName.split(' ')[0]}`
     : `${greeting()}`;
 
+  // ── Plan pill (top-right) ──
+  const planPill = (() => {
+    if (!planLoaded || !subscription || userRole === 'super_admin') return null;
+    const plan = subscription.plan;
+    if (plan === 'trial') {
+      const urgent = trialDaysLeft <= 3;
+      return {
+        label: 'Free Trial',
+        detail: trialDaysLeft <= 0
+          ? 'Trial ended'
+          : `${trialDaysLeft} day${trialDaysLeft !== 1 ? 's' : ''} left`,
+        tone: urgent ? 'urgent' : 'trial' as const,
+      };
+    }
+    if (plan === 'pro_monthly' || plan === 'pro_yearly') {
+      const planLabel = plan === 'pro_monthly' ? 'Pro Monthly' : 'Pro Yearly';
+      const end = subscription.currentPeriodEnd;
+      const detail = end
+        ? `Renews ${new Date(end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+        : 'Active';
+      const urgent = subDaysLeft !== null && subDaysLeft <= 7;
+      return { label: planLabel, detail, tone: urgent ? 'urgent' : 'pro' as const };
+    }
+    return null;
+  })();
+
   // ── Render ───────────────────────────────────────────────
   return (
     <div className="relative space-y-5 min-h-screen">
@@ -174,6 +208,28 @@ export default function DashboardPage() {
                 {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
                 {clinicName ? ` · ${clinicName}` : ''}
               </p>
+              {planPill && (
+                <Link
+                  to="/pricing"
+                  title="View pricing & manage your plan"
+                  className="mt-1.5 inline-flex items-center gap-1.5 text-xs hover:underline"
+                >
+                  <span className={[
+                    'w-1.5 h-1.5 rounded-full',
+                    planPill.tone === 'urgent' ? 'bg-red-500' : planPill.tone === 'pro' ? 'bg-emerald-500' : 'bg-orange-500',
+                  ].join(' ')} />
+                  <span className={[
+                    'font-semibold',
+                    planPill.tone === 'urgent'
+                      ? 'text-red-600 dark:text-red-400'
+                      : planPill.tone === 'pro'
+                        ? 'text-emerald-600 dark:text-emerald-400'
+                        : 'text-orange-600 dark:text-orange-400',
+                  ].join(' ')}>{planPill.label}</span>
+                  <span className="text-gray-400 dark:text-gray-500">·</span>
+                  <span className="text-gray-500 dark:text-gray-400">{planPill.detail}</span>
+                </Link>
+              )}
             </div>
           </div>
         </div>

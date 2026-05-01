@@ -115,13 +115,28 @@ export default function ClinicDetailsSection({
               className="mb-2 h-16 w-auto object-contain rounded border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 p-1"
             />
           )}
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-          >
-            {values.clinicLogo ? 'Change Logo' : 'Upload Logo'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => fileInputRef.current?.click()}
+              className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-600 rounded-md text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              {values.clinicLogo ? 'Change Logo' : 'Upload Logo'}
+            </button>
+            {values.clinicLogo && (
+              <button
+                type="button"
+                onClick={() => {
+                  onChange({ clinicLogo: undefined });
+                  onLogoError('');
+                  if (fileInputRef.current) fileInputRef.current.value = '';
+                }}
+                className="px-3 py-2 text-sm border border-red-300 dark:border-red-700 rounded-md text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+              >
+                Remove
+              </button>
+            )}
+          </div>
           <input
             ref={fileInputRef}
             type="file"

@@ -1,8 +1,9 @@
-import { useEffect, lazy, Suspense } from 'react';
+import { useEffect, useRef, lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import AppLayout from './components/layout/AppLayout';
 import NotFoundPage from './components/layout/NotFoundPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import ClientProtectedRoute from './components/ClientProtectedRoute';
 import { useAuthStore } from './store/authStore';
 import { useSettingsStore } from './store/settingsStore';
 import { useTemplateStore } from './store/templateStore';
@@ -10,6 +11,8 @@ import { usePlanStore } from './store/planStore';
 import { useUserStore } from './store/userStore';
 import { useClientStore } from './store/clientStore';
 import { useProgramStore } from './store/programStore';
+import { useClientPortalStore } from './store/clientPortalStore';
+import { resetUserStores } from './store/resetUserStores';
 import ErrorBoundary from './components/ErrorBoundary';
 
 const LoginPage           = lazy(() => import('./pages/LoginPage'));
@@ -32,6 +35,7 @@ const AdminPage           = lazy(() => import('./features/admin/pages/AdminPage'
 const FoodLibraryPage     = lazy(() => import('./features/diet/pages/FoodLibraryPage'));
 const DietPlansPage       = lazy(() => import('./features/diet/pages/DietPlansPage'));
 const DietPlanBuilderPage = lazy(() => import('./features/diet/pages/DietPlanBuilderPage'));
+const ClientHomePage      = lazy(() => import('./features/clientPortal/pages/ClientHomePage'));
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -39,6 +43,14 @@ const router = createBrowserRouter([
   { path: '/onboarding', element: <OnboardingPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/pricing', element: <PricingPage /> },
+  {
+    path: '/client',
+    element: (
+      <ClientProtectedRoute>
+        <ClientHomePage />
+      </ClientProtectedRoute>
+    ),
+  },
   {
     path: '/',
     element: (
@@ -81,20 +93,32 @@ export default function App() {
   const resetSettings = useSettingsStore((s) => s.reset);
   const initializeClients = useClientStore((s) => s.initializeFromDB);
   const initializePrograms = useProgramStore((s) => s.initializeFromDB);
+  const resetPortal = useClientPortalStore((s) => s.reset);
 
   // Initialize auth once on mount
   useEffect(() => {
     initialize();
   }, [initialize]);
 
-  // When user signs out (user → null), reset all user-specific stores so the
-  // next sign-in starts fresh and doesn't flash the previous user's UI.
+  // Reset every user-scoped store whenever the auth user changes — both on
+  // sign-out (user → null) and when a different user signs in without a
+  // page refresh (user.id changes). Without this, the next user sees the
+  // previous user's clients/programs/etc. flash because every store's
+  // `initializeFromDB` early-returns when `isLoaded === true`.
+  const lastUserIdRef = useRef<string | null>(null);
   useEffect(() => {
-    if (user) return;
-    resetUser();
-    resetPlan();
-    resetSettings();
-  }, [user, resetUser, resetPlan, resetSettings]);
+    const currentId = user?.id ?? null;
+    const prevId = lastUserIdRef.current;
+    if (prevId === currentId) return;
+    lastUserIdRef.current = currentId;
+    if (prevId !== null && currentId !== prevId) {
+      resetUser();
+      resetPlan();
+      resetSettings();
+      resetPortal();
+      resetUserStores();
+    }
+  }, [user, resetUser, resetPlan, resetSettings, resetPortal]);
 
   // Critical stores first (needed by ProtectedRoute + layout)
   useEffect(() => {
