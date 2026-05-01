@@ -766,16 +766,16 @@ export default function ClientProfilePage() {
       </Link>
 
       {/* ── Profile header card ── */}
-      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-6 py-5 shadow-sm flex items-start justify-between gap-4">
-        <div className="flex items-start gap-4">
+      <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-4 sm:px-6 py-4 sm:py-5 shadow-sm flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+        <div className="flex items-start gap-3 sm:gap-4 min-w-0">
           <ClientAvatar name={client.name} size="lg" />
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">{client.name}</h1>
+          <div className="min-w-0 flex-1">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight break-words">{client.name}</h1>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1">
               {client.age   && <span className="text-sm text-gray-500 dark:text-gray-400">Age: {client.age}</span>}
               {client.email && (
-                <span className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400">
-                  <Mail size={13} /> {client.email}
+                <span className="flex items-center gap-1 text-sm text-gray-500 dark:text-gray-400 break-all">
+                  <Mail size={13} className="shrink-0" /> {client.email}
                 </span>
               )}
               {client.phone && (
@@ -804,10 +804,10 @@ export default function ClientProfilePage() {
             </div>
           </div>
         </div>
-        <div className="shrink-0 flex flex-col items-end gap-2">
+        <div className="shrink-0 flex flex-row sm:flex-col flex-wrap items-stretch sm:items-end gap-2">
           <button
             onClick={() => setModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium transition-colors"
+            className="flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 text-sm font-medium transition-colors"
           >
             <Pencil size={13} /> Edit
           </button>
