@@ -1,7 +1,7 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   Shield, Users, UserCheck, Receipt,
-  Pencil, Trash2, RefreshCw, Check, X, ChevronDown,
+  Pencil, Trash2, RefreshCw, Check, X, ChevronDown, MoreVertical, CalendarPlus,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useUserStore } from '../../../store/userStore';
@@ -181,7 +181,26 @@ function UsersTab({ isSuperAdmin, isStaff }: { isSuperAdmin: boolean; isStaff: b
   const canManage = isSuperAdmin || isStaff; // can edit subscriptions & names
   const [users, setUsers] = useState<UnifiedUser[]>([]);
   const [loading, setLoading] = useState(true);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const menuContainerRef = useRef<HTMLTableSectionElement | null>(null);
   const showToast = useToastStore((s) => s.showToast);
+
+  // Close the kebab menu on any click outside the table body or on Escape.
+  useEffect(() => {
+    if (!openMenuId) return;
+    const onPointer = (e: MouseEvent) => {
+      const target = e.target as Node | null;
+      if (!menuContainerRef.current || !target) return;
+      if (!menuContainerRef.current.contains(target)) setOpenMenuId(null);
+    };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpenMenuId(null); };
+    document.addEventListener('mousedown', onPointer);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onPointer);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [openMenuId]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -313,7 +332,7 @@ function UsersTab({ isSuperAdmin, isStaff }: { isSuperAdmin: boolean; isStaff: b
               {canManage && <Th>Actions</Th>}
             </tr>
           </thead>
-          <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+          <tbody ref={menuContainerRef} className="divide-y divide-gray-100 dark:divide-gray-700/50">
             {users.map((u) => {
               const canEdit = canManage && u.role !== 'super_admin';
               return (
@@ -417,40 +436,56 @@ function UsersTab({ isSuperAdmin, isStaff }: { isSuperAdmin: boolean; isStaff: b
 
                   {/* Actions */}
                   {canManage && (
-                    <td className="px-4 py-3">
+                    <td className="px-2 py-3 w-10 text-right relative">
                       {u.subId && (
-                        <div className="flex items-center flex-wrap gap-1">
+                        <>
                           <button
-                            onClick={() => handleExtend(u, 30)}
-                            title="Extend paid period by 30 days"
-                            className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors font-semibold"
+                            onClick={() => setOpenMenuId((prev) => (prev === u.id ? null : u.id))}
+                            title="Subscription actions"
+                            aria-label="Open subscription actions"
+                            aria-haspopup="menu"
+                            aria-expanded={openMenuId === u.id}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
                           >
-                            +30d
+                            <MoreVertical size={16} />
                           </button>
-                          <button
-                            onClick={() => handleExtend(u, 365)}
-                            title="Extend paid period by 1 year"
-                            className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors font-semibold"
-                          >
-                            +1y
-                          </button>
-                          <button
-                            onClick={() => upsertSub(u.id, { trial_started_at: new Date().toISOString() })}
-                            title="Reset trial to today"
-                            className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
-                          >
-                            <RefreshCw size={11} />
-                            Reset trial
-                          </button>
-                          <button
-                            onClick={() => upsertSub(u.id, { clients_created: 0 })}
-                            title="Reset clients counter"
-                            className="flex items-center gap-1 text-[11px] px-2 py-1 rounded bg-gray-50 dark:bg-gray-700/50 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          >
-                            <RefreshCw size={11} />
-                            Reset counter
-                          </button>
-                        </div>
+                          {openMenuId === u.id && (
+                            <div
+                              role="menu"
+                              className="absolute right-2 top-full mt-1 z-30 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl py-1 text-left"
+                            >
+                              <button
+                                role="menuitem"
+                                onClick={() => { handleExtend(u, 30); setOpenMenuId(null); }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors font-semibold"
+                              >
+                                <CalendarPlus size={12} /> Extend +30 days
+                              </button>
+                              <button
+                                role="menuitem"
+                                onClick={() => { handleExtend(u, 365); setOpenMenuId(null); }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors font-semibold"
+                              >
+                                <CalendarPlus size={12} /> Extend +1 year
+                              </button>
+                              <div className="my-1 border-t border-gray-100 dark:border-gray-700/60" />
+                              <button
+                                role="menuitem"
+                                onClick={() => { upsertSub(u.id, { trial_started_at: new Date().toISOString() }); setOpenMenuId(null); }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors"
+                              >
+                                <RefreshCw size={12} /> Reset trial to today
+                              </button>
+                              <button
+                                role="menuitem"
+                                onClick={() => { upsertSub(u.id, { clients_created: 0 }); setOpenMenuId(null); }}
+                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors"
+                              >
+                                <RefreshCw size={12} /> Reset clients counter
+                              </button>
+                            </div>
+                          )}
+                        </>
                       )}
                     </td>
                   )}
