@@ -985,11 +985,13 @@ function Footer() {
           <BrandTile className="w-7 h-7 rounded-lg" />
           <span className="text-sm text-white/50">© {new Date().getFullYear()} Full Range Lab</span>
         </div>
-        <div className="flex items-center gap-6 text-sm text-white/50">
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm text-white/50">
           <a href="#features" className="hover:text-white transition-colors">Features</a>
           <Link to="/pricing" className="hover:text-white transition-colors">Pricing</Link>
           <Link to="/login" className="hover:text-white transition-colors">Sign in</Link>
           <Link to="/signup" className="hover:text-white transition-colors">Sign up</Link>
+          <Link to="/privacy" className="hover:text-white transition-colors">Privacy</Link>
+          <Link to="/terms" className="hover:text-white transition-colors">Terms</Link>
         </div>
       </div>
     </footer>

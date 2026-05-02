@@ -20,6 +20,8 @@ const SignupPage          = lazy(() => import('./pages/SignupPage'));
 const OnboardingPage      = lazy(() => import('./pages/OnboardingPage'));
 const ResetPasswordPage   = lazy(() => import('./pages/ResetPasswordPage'));
 const PricingPage         = lazy(() => import('./pages/PricingPage'));
+const PrivacyPage         = lazy(() => import('./pages/PrivacyPage'));
+const TermsPage           = lazy(() => import('./pages/TermsPage'));
 const DashboardPage       = lazy(() => import('./features/dashboard/pages/DashboardPage'));
 const ExercisesPage       = lazy(() => import('./features/exercises/pages/ExercisesPage'));
 const ClientsPage         = lazy(() => import('./features/clients/pages/ClientsPage'));
@@ -43,6 +45,8 @@ const router = createBrowserRouter([
   { path: '/onboarding', element: <OnboardingPage /> },
   { path: '/reset-password', element: <ResetPasswordPage /> },
   { path: '/pricing', element: <PricingPage /> },
+  { path: '/privacy', element: <PrivacyPage /> },
+  { path: '/terms', element: <TermsPage /> },
   {
     path: '/client',
     element: (
