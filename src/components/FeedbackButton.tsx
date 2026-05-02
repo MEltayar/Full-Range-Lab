@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { MessageCircle, Mail, MessageSquare, X } from 'lucide-react';
 import { CONTACT_NUMBER } from '../lib/paymentConfig';
 
-const FEEDBACK_EMAIL = 'mostafaeltayar98@gmail.com';
+const FEEDBACK_EMAIL = 'fullrangelab@gmail.com';
 const SUBJECT = 'Feedback on Full Range Lab';
 const BODY_TEMPLATE =
   "Hi, I'm using Full Range Lab and wanted to share some feedback:\n\n" +
