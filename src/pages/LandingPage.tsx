@@ -393,8 +393,14 @@ function ClientsFeature() {
           <BrowserFrame title="Clients" url="fullrangelab.com/clients">
             <img src={SHOTS.clientsList} alt="Clients list" className="block w-full h-auto" draggable={false} />
           </BrowserFrame>
-          {/* Floating Add Client modal */}
-          <div className="absolute -bottom-8 -right-4 sm:-right-12 w-[58%] hidden sm:block"
+          {/* Mobile: stacked beneath main */}
+          <div className="sm:hidden mt-6 mx-auto w-[82%]">
+            <BrowserFrame compact title="Add Client" tone="modal">
+              <img src={SHOTS.addClient} alt="Add client" className="block w-full h-auto" draggable={false} />
+            </BrowserFrame>
+          </div>
+          {/* Desktop: floating overlap */}
+          <div className="hidden sm:block absolute -bottom-8 -right-12 w-[58%]"
             style={{ animation: 'lp-float 7s ease-in-out infinite' }}>
             <BrowserFrame compact title="Add Client" tone="modal">
               <img src={SHOTS.addClient} alt="Add client" className="block w-full h-auto" draggable={false} />
