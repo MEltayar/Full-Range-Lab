@@ -9,6 +9,7 @@ import TrialBanner from '../TrialBanner';
 import RenewalBanner from '../RenewalBanner';
 import TrialExpiredWall from '../TrialExpiredWall';
 import SubscriptionExpiredWall from '../SubscriptionExpiredWall';
+import FeedbackButton from '../FeedbackButton';
 import { usePlanStore } from '../../store/planStore';
 
 export default function AppLayout() {
@@ -60,6 +61,7 @@ export default function AppLayout() {
 
       <ToastContainer />
       <ConfirmDialog />
+      <FeedbackButton />
     </div>
   );
 }
