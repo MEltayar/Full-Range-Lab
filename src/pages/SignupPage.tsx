@@ -16,6 +16,7 @@ export default function SignupPage() {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [confirm, setConfirm]   = useState('');
+  const [agreed, setAgreed]     = useState(false);
   const [showPass, setShowPass] = useState(false);
   const [showConf, setShowConf] = useState(false);
   const [error, setError]       = useState('');
@@ -25,6 +26,7 @@ export default function SignupPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError('');
+    if (!agreed) { setError('Please agree to the Terms and Privacy Policy to continue'); return; }
     if (password !== confirm) { setError('Passwords do not match'); return; }
     const pwErr = validatePassword(password);
     if (pwErr) { setError(pwErr); return; }
@@ -209,6 +211,27 @@ export default function SignupPage() {
               </div>
             </div>
 
+            {/* Terms agreement */}
+            <label className="flex items-start gap-2.5 cursor-pointer select-none -mt-1">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-white/20 bg-white/5 text-orange-500 focus:ring-2 focus:ring-orange-500/50 focus:ring-offset-0 cursor-pointer accent-orange-500"
+              />
+              <span className="text-xs text-white/55 leading-relaxed">
+                I agree to the{' '}
+                <Link to="/terms" target="_blank" className="text-orange-300 hover:text-orange-200 underline underline-offset-2">
+                  Terms of Service
+                </Link>
+                {' '}and{' '}
+                <Link to="/privacy" target="_blank" className="text-orange-300 hover:text-orange-200 underline underline-offset-2">
+                  Privacy Policy
+                </Link>
+                .
+              </span>
+            </label>
+
             {error && (
               <p className="text-sm text-red-300 bg-red-500/12 border border-red-400/25 rounded-xl px-4 py-3">
                 {error}
@@ -216,8 +239,8 @@ export default function SignupPage() {
             )}
 
             {/* Primary CTA */}
-            <button type="submit" disabled={loading}
-              className="sp-cta w-full py-3.5 px-4 disabled:opacity-50 text-white text-sm font-bold rounded-xl tracking-wide">
+            <button type="submit" disabled={loading || !agreed}
+              className="sp-cta w-full py-3.5 px-4 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl tracking-wide">
               {loading ? 'Creating account…' : 'Create account →'}
             </button>
           </form>
