@@ -160,6 +160,7 @@ export default function ClientsPage() {
             recentlyActiveClientIds={recentClientIds}
             onEdit={handleEdit}
             onDelete={handleDelete}
+            onAddClient={addBlocked ? undefined : () => { setSelectedClient(null); setModalOpen(true); }}
           />
         </div>
       </div>
