@@ -84,7 +84,7 @@ export default function OnboardingPage() {
           <div className="text-center">
             <h1 className="text-3xl font-black text-white tracking-tight drop-shadow-lg">Full Range Lab</h1>
             <p className="text-sm font-semibold mt-1.5" style={{ color: 'rgba(253,186,116,0.75)' }}>
-              Move better. Train smarter.
+              All your clients, in one workspace
             </p>
           </div>
         </div>

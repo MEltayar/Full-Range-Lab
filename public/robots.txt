@@ -1,0 +1,19 @@
+User-agent: *
+Allow: /
+
+# Block authenticated app routes from indexing — they're behind auth anyway,
+# but explicit blocking saves crawl budget and avoids login-wall snippets in SERPs.
+Disallow: /dashboard
+Disallow: /clients
+Disallow: /programs
+Disallow: /diet-plans
+Disallow: /exercises
+Disallow: /food
+Disallow: /templates
+Disallow: /config
+Disallow: /admin
+Disallow: /onboarding
+Disallow: /reset-password
+Disallow: /portal
+
+Sitemap: https://fullrangelab.com/sitemap.xml

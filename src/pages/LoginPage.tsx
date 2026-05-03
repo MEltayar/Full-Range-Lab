@@ -142,7 +142,7 @@ export default function LoginPage() {
           <div className="text-center">
             <h1 className="text-3xl font-black text-white tracking-tight drop-shadow-lg">Full Range Lab</h1>
             <p className="text-sm font-semibold mt-1.5" style={{ color: 'rgba(253,186,116,0.75)' }}>
-              Move better. Train smarter.
+              All your clients, in one workspace
             </p>
           </div>
         </div>
@@ -204,7 +204,7 @@ export default function LoginPage() {
             <>
               <div className="mb-7">
                 <h2 className="text-xl font-bold text-white">Welcome back</h2>
-                <p className="text-sm text-white/40 mt-1.5">Built for physiotherapists & elite trainers</p>
+                <p className="text-sm text-white/40 mt-1.5">Built for personal trainers & physiotherapists</p>
               </div>
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-5">
