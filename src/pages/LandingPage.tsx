@@ -251,7 +251,7 @@ function Nav() {
           <BrandTile className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl shadow-lg shrink-0" />
           <div className="min-w-0">
             <div className="text-sm sm:text-base font-bold tracking-tight truncate">Full Range Lab</div>
-            <div className="hidden sm:block text-[11px] text-orange-300/70 -mt-0.5 font-semibold">Move better. Train smarter.</div>
+            <div className="hidden sm:block text-[11px] text-orange-300/70 -mt-0.5 font-semibold">All your clients, in one workspace</div>
           </div>
         </Link>
 
@@ -289,7 +289,7 @@ function Hero() {
         The complete training studio
         <span className="block mt-2"
           style={{ background: 'linear-gradient(135deg, #fb923c 0%, #f97316 50%, #dc2626 100%)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent', backgroundClip: 'text' }}>
-          for physiotherapists & elite trainers
+          for personal trainers & physiotherapists
         </span>
       </h1>
 
@@ -341,8 +341,8 @@ function Hero() {
 
 function Marquee() {
   const items = [
-    { icon: Stethoscope, label: 'Built for physiotherapists' },
     { icon: Dumbbell,    label: 'Built for personal trainers' },
+    { icon: Stethoscope, label: 'Built for physiotherapists' },
     { icon: ShieldCheck, label: 'Your data, your branding' },
     { icon: Smartphone,  label: 'Mobile-first client portal' },
     { icon: FileText,    label: 'PDF & Excel export' },

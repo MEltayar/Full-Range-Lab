@@ -175,6 +175,38 @@ function SelectCell<T extends string>({
   );
 }
 
+// Controlled date input that commits on blur. Uncontrolled `defaultValue` +
+// `onChange` was eating partial picks — onChange only fires on a fully valid
+// date, so closing the calendar mid-pick left the DB null while the field
+// looked filled.
+function PeriodEndInput({ value, onCommit }: { value: string | null; onCommit: (v: string) => void }) {
+  const initial = value ? value.slice(0, 10) : '';
+  const [draft, setDraft] = useState(initial);
+  const lastCommittedRef = useRef(initial);
+
+  useEffect(() => {
+    setDraft(initial);
+    lastCommittedRef.current = initial;
+  }, [initial]);
+
+  function commit() {
+    if (draft === lastCommittedRef.current) return;
+    lastCommittedRef.current = draft;
+    onCommit(draft);
+  }
+
+  return (
+    <input
+      type="date"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+      className="text-xs border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
+    />
+  );
+}
+
 // ── Unified Users Tab ─────────────────────────────────────────────────────────
 
 function UsersTab({ isSuperAdmin, isStaff }: { isSuperAdmin: boolean; isStaff: boolean }) {
@@ -291,7 +323,16 @@ function UsersTab({ isSuperAdmin, isStaff }: { isSuperAdmin: boolean; isStaff: b
   }
 
   async function handlePlanChange(u: UnifiedUser, plan: PlanOption) {
-    await upsertSub(u.id, { plan });
+    const patch: Record<string, unknown> = { plan };
+    // Auto-fill a sensible period end when promoting to a Pro plan if none is set —
+    // prevents the wall from firing because admin forgot the date field.
+    if ((plan === 'pro_monthly' || plan === 'pro_yearly') && !u.currentPeriodEnd) {
+      const days = plan === 'pro_yearly' ? 365 : 30;
+      const next = new Date();
+      next.setDate(next.getDate() + days);
+      patch.current_period_end = next.toISOString();
+    }
+    await upsertSub(u.id, patch);
   }
 
   async function handleStatusChange(u: UnifiedUser, status: StatusOption) {
@@ -413,11 +454,9 @@ function UsersTab({ isSuperAdmin, isStaff }: { isSuperAdmin: boolean; isStaff: b
                   {/* Period End */}
                   <td className="px-4 py-3 whitespace-nowrap">
                     {u.subId && canManage ? (
-                      <input
-                        type="date"
-                        defaultValue={u.currentPeriodEnd ? u.currentPeriodEnd.slice(0, 10) : ''}
-                        onChange={(e) => handlePeriodEndChange(u, e.target.value)}
-                        className="text-xs border border-gray-300 dark:border-gray-600 rounded px-1.5 py-0.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                      <PeriodEndInput
+                        value={u.currentPeriodEnd}
+                        onCommit={(v) => handlePeriodEndChange(u, v)}
                       />
                     ) : (
                       <span className="text-xs text-gray-500 dark:text-gray-400">{fmt(u.currentPeriodEnd)}</span>

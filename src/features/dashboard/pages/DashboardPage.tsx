@@ -4,7 +4,7 @@ import {
   Users,
   ClipboardList,
   Dumbbell,
-  Library,
+  Utensils,
   ChevronRight,
   AlertCircle,
   UserPlus,
@@ -14,12 +14,13 @@ import {
   CheckCircle,
   PauseCircle,
   LayoutDashboard,
+  Clock,
 } from 'lucide-react';
 import { useClientStore } from '../../../store/clientStore';
 import { useProgramStore } from '../../../store/programStore';
-import { useExerciseStore } from '../../../store/exerciseStore';
+import { useDietPlanStore } from '../../../store/dietPlanStore';
+import { useClientActivityStore } from '../../../store/clientActivityStore';
 import { useSettingsStore } from '../../../store/settingsStore';
-import { useTemplateStore } from '../../../store/templateStore';
 import { usePlanStore } from '../../../store/planStore';
 import { useUserStore } from '../../../store/userStore';
 import GymFloatAnimation from '../../../components/GymFloatAnimation';
@@ -98,8 +99,12 @@ function StatusBadge({ status }: { status?: string }) {
 export default function DashboardPage() {
   const { clients, isLoaded: clientsLoaded, initializeFromDB: initClients } = useClientStore();
   const { programs, isLoaded: programsLoaded, initializeFromDB: initPrograms } = useProgramStore();
-  const { exercises, isLoaded: exercisesLoaded, initializeFromDB: initExercises } = useExerciseStore();
-  const { templates, isLoaded: templatesLoaded, initializeFromDB: initTemplates } = useTemplateStore();
+  const dietPlans       = useDietPlanStore((s) => s.plans);
+  const dietPlansLoaded = useDietPlanStore((s) => s.isLoaded);
+  const initDietPlans   = useDietPlanStore((s) => s.initializeFromDB);
+  const recentClientIds   = useClientActivityStore((s) => s.recentClientIds);
+  const activityLoaded    = useClientActivityStore((s) => s.isLoaded);
+  const loadActivity      = useClientActivityStore((s) => s.load);
   const { clinicName, clinicLogo, therapistName, profileType, isLoaded: settingsLoaded } = useSettingsStore();
 
   const subscription   = usePlanStore((s) => s.subscription);
@@ -111,18 +116,34 @@ export default function DashboardPage() {
   useEffect(() => {
     if (!clientsLoaded)   initClients();
     if (!programsLoaded)  initPrograms();
-    if (!exercisesLoaded) initExercises();
-    if (!templatesLoaded) initTemplates();
+    if (!dietPlansLoaded) initDietPlans();
+    if (!activityLoaded)  loadActivity();
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Derived ──────────────────────────────────────────────
   const isGym = profileType === 'gym';
-  const isLoading = !clientsLoaded || !programsLoaded || !exercisesLoaded || !templatesLoaded;
+  const isLoading = !clientsLoaded || !programsLoaded || !dietPlansLoaded;
   const isSetupIncomplete = settingsLoaded && !clinicName;
 
   const activePrograms  = useMemo(() => programs.filter((p) => p.status === 'active'),    [programs]);
   const pausedPrograms  = useMemo(() => programs.filter((p) => p.status === 'paused'),    [programs]);
+  const activeDietPlans = useMemo(() => dietPlans.filter((p) => p.status === 'active'),   [dietPlans]);
+
+  // Stale clients: have an active program/diet but no logged activity in last 7d.
+  // Surfaces who needs a check-in nudge from the trainer.
+  const staleClients = useMemo(() => {
+    if (!activityLoaded) return [];
+    const inCare = new Set<string>();
+    activePrograms.forEach((p) => inCare.add(p.clientId));
+    activeDietPlans.forEach((p) => inCare.add(p.clientId));
+    return clients.filter((c) => inCare.has(c.id) && !recentClientIds.has(c.id));
+  }, [clients, activePrograms, activeDietPlans, recentClientIds, activityLoaded]);
+
+  const recentDietPlans = useMemo(
+    () => [...dietPlans].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 4),
+    [dietPlans],
+  );
 
   const clientsThisMonth = useMemo(() => {
     const cutoff = new Date();
@@ -281,18 +302,20 @@ export default function DashboardPage() {
               to="/programs"
             />
             <StatCard
-              label="Exercise Library"
-              value={exercises.length}
-              icon={Dumbbell}
-              gradient="bg-gradient-to-br from-violet-500 to-violet-700"
-              to="/exercises"
+              label="Active Diet Plans"
+              value={activeDietPlans.length}
+              sub={dietPlans.length > 0 ? `${dietPlans.length} total` : undefined}
+              icon={Utensils}
+              gradient="bg-gradient-to-br from-emerald-500 to-green-700"
+              to="/diet-plans"
             />
             <StatCard
-              label="Saved Templates"
-              value={templates.filter((t) => !t.isBuiltIn).length}
-              icon={Library}
-              gradient="bg-gradient-to-br from-amber-500 to-orange-600"
-              to="/templates"
+              label="Active This Week"
+              value={recentClientIds.size}
+              sub={clients.length > 0 ? `of ${clients.length} clients` : undefined}
+              icon={TrendingUp}
+              gradient="bg-gradient-to-br from-violet-500 to-violet-700"
+              to="/clients"
             />
           </div>
         )}
@@ -500,6 +523,79 @@ export default function DashboardPage() {
                         +{clientsWithNoProgram.length - 3} more without a program
                       </li>
                     )}
+                  </ul>
+                </div>
+              )}
+
+              {/* Quiet this week — clients in active care with no recent activity */}
+              {staleClients.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-rose-200 dark:border-rose-800/50 overflow-hidden">
+                  <div className="flex items-center gap-2 px-5 py-3.5 border-b border-rose-100 dark:border-rose-800/30 bg-rose-50/50 dark:bg-rose-900/10">
+                    <Clock size={15} className="text-rose-600 dark:text-rose-400" />
+                    <h2 className="font-semibold text-rose-800 dark:text-rose-300 text-sm">Quiet This Week</h2>
+                    <span className="ml-auto text-xs bg-rose-100 dark:bg-rose-900/40 text-rose-600 dark:text-rose-400 px-2 py-0.5 rounded-full font-medium">
+                      {staleClients.length}
+                    </span>
+                  </div>
+                  <ul className="divide-y divide-gray-50 dark:divide-gray-700/50">
+                    {staleClients.slice(0, 3).map((c) => {
+                      const initials = c.name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
+                      return (
+                        <li key={c.id}>
+                          <Link
+                            to={`/clients/${c.id}`}
+                            className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+                          >
+                            <div className="w-7 h-7 rounded-full bg-rose-100 dark:bg-rose-900/40 flex items-center justify-center shrink-0">
+                              <span className="text-xs font-bold text-rose-600 dark:text-rose-400">{initials}</span>
+                            </div>
+                            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 flex-1 truncate">{c.name}</p>
+                            <span className="text-xs text-rose-600 dark:text-rose-400 font-medium shrink-0">No activity</span>
+                          </Link>
+                        </li>
+                      );
+                    })}
+                    {staleClients.length > 3 && (
+                      <li className="px-5 py-2 text-xs text-gray-400 dark:text-gray-500">
+                        +{staleClients.length - 3} more inactive
+                      </li>
+                    )}
+                  </ul>
+                </div>
+              )}
+
+              {/* Recent diet plans */}
+              {recentDietPlans.length > 0 && (
+                <div className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+                  <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-700">
+                    <div className="flex items-center gap-2">
+                      <Utensils size={16} className="text-emerald-600 dark:text-emerald-400" />
+                      <h2 className="font-semibold text-gray-900 dark:text-gray-100">Recent Diet Plans</h2>
+                    </div>
+                    <Link to="/diet-plans" className="text-xs text-emerald-600 dark:text-emerald-400 hover:underline font-medium flex items-center gap-1">
+                      View all <ChevronRight size={12} />
+                    </Link>
+                  </div>
+                  <ul className="divide-y divide-gray-50 dark:divide-gray-700/60">
+                    {recentDietPlans.map((plan) => {
+                      const clientName = clientMap.get(plan.clientId) ?? 'Unknown client';
+                      return (
+                        <li key={plan.id}>
+                          <Link
+                            to={`/diet-plans/${plan.id}/edit`}
+                            className="flex items-center gap-3 px-5 py-2.5 hover:bg-gray-50 dark:hover:bg-gray-700/40 transition-colors"
+                          >
+                            <StatusBadge status={plan.status} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{plan.name || 'Untitled'}</p>
+                              <p className="text-xs text-gray-400 dark:text-gray-500 truncate">{clientName}</p>
+                            </div>
+                            <p className="text-xs text-gray-400 dark:text-gray-500 shrink-0">{timeAgo(plan.createdAt)}</p>
+                            <ChevronRight size={13} className="text-gray-300 dark:text-gray-600 shrink-0" />
+                          </Link>
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               )}
