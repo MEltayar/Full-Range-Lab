@@ -49,27 +49,91 @@ export default function RolePickerPage() {
   if (!isDualRole) return null;
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4 py-12">
-      <div className="w-full max-w-2xl">
-        <div className="flex flex-col items-center gap-3 mb-10">
-          <BrandTile className="w-14 h-14 rounded-2xl" />
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Choose your view</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 text-center max-w-md">
-            This account is linked as both a trainer and a client. Pick which side to use — you can switch any time.
-          </p>
+    <div className="min-h-screen flex items-center justify-center px-4 py-12 overflow-hidden relative">
+
+      <style>{`
+        @keyframes rp-card {
+          0%   { opacity: 0; transform: translateY(28px) scale(0.97); }
+          100% { opacity: 1; transform: translateY(0)    scale(1); }
+        }
+        @keyframes rp-logo-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0), 0 8px 32px rgba(249,115,22,0.45); }
+          50%       { box-shadow: 0 0 0 8px rgba(249,115,22,0.08), 0 8px 48px rgba(249,115,22,0.65); }
+        }
+        @keyframes rp-overlay-shift {
+          0%   { opacity: 1; }
+          50%  { opacity: 0.88; }
+          100% { opacity: 1; }
+        }
+        .rp-tile {
+          background: rgba(8,4,1,0.72);
+          box-shadow: 0 32px 80px rgba(0,0,0,0.65), inset 0 1px 0 rgba(255,255,255,0.07);
+          transition: transform 0.18s cubic-bezier(0.34,1.56,0.64,1), box-shadow 0.18s ease, border-color 0.18s ease;
+        }
+        .rp-tile:hover {
+          transform: translateY(-3px);
+          border-color: rgba(249,115,22,0.55) !important;
+          box-shadow: 0 32px 80px rgba(0,0,0,0.65), 0 0 32px rgba(249,115,22,0.18), inset 0 1px 0 rgba(255,255,255,0.07);
+        }
+        .rp-tile:active {
+          transform: translateY(-1px) scale(0.99);
+          transition: transform 0.08s ease;
+        }
+        .rp-icon-trainer {
+          background: linear-gradient(135deg, rgba(249,115,22,0.22), rgba(220,38,38,0.18));
+          border: 1px solid rgba(249,115,22,0.28);
+        }
+        .rp-icon-client {
+          background: linear-gradient(135deg, rgba(59,130,246,0.22), rgba(37,99,235,0.18));
+          border: 1px solid rgba(59,130,246,0.28);
+        }
+      `}</style>
+
+      {/* Background photo */}
+      <div className="absolute inset-0 bg-cover bg-center bg-no-repeat scale-105"
+        style={{ backgroundImage: `url('https://images.unsplash.com/photo-1583454110551-21f2fa2afe61?w=1600&q=80&fit=crop')`, filter: 'brightness(0.72)' }} />
+
+      {/* Vignette overlay */}
+      <div className="absolute inset-0" style={{
+        background: 'radial-gradient(ellipse 75% 85% at 50% 50%, rgba(6,3,1,0.42) 0%, rgba(6,3,1,0.80) 100%)',
+        animation: 'rp-overlay-shift 12s ease-in-out infinite',
+      }} />
+
+      {/* Floating orange glow */}
+      <div className="absolute pointer-events-none" style={{
+        width: '620px', height: '620px',
+        borderRadius: '50%',
+        background: 'radial-gradient(circle, rgba(249,115,22,0.13) 0%, transparent 70%)',
+        top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+      }} />
+
+      {/* Content */}
+      <div className="relative w-full max-w-2xl z-10" style={{ animation: 'rp-card 0.6s cubic-bezier(0.16,1,0.3,1) both' }}>
+
+        {/* Brand */}
+        <div className="flex flex-col items-center gap-4 mb-10">
+          <div className="rounded-2xl overflow-hidden" style={{ animation: 'rp-logo-pulse 3s ease-in-out infinite' }}>
+            <BrandTile className="w-16 h-16 rounded-2xl" />
+          </div>
+          <div className="text-center">
+            <h1 className="text-3xl font-black text-white tracking-tight drop-shadow-lg">Choose your view</h1>
+            <p className="text-sm font-medium mt-2 max-w-md mx-auto" style={{ color: 'rgba(253,186,116,0.72)' }}>
+              This account is linked as both a trainer and a client. Pick which side to use — you can switch any time.
+            </p>
+          </div>
         </div>
 
         <div className="grid sm:grid-cols-2 gap-4">
           <button
             onClick={() => pick('trainer')}
-            className="group flex flex-col items-start gap-4 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-orange-400 dark:hover:border-orange-500 hover:shadow-lg transition-all text-left"
+            className="rp-tile group flex flex-col items-start gap-4 p-6 rounded-2xl border border-white/10 backdrop-blur-2xl text-left"
           >
-            <div className="w-12 h-12 rounded-xl bg-orange-50 dark:bg-orange-500/10 flex items-center justify-center text-orange-600 dark:text-orange-400 group-hover:scale-110 transition-transform">
+            <div className="rp-icon-trainer w-12 h-12 rounded-xl flex items-center justify-center text-orange-300 group-hover:scale-110 transition-transform">
               <Briefcase size={22} />
             </div>
             <div>
-              <div className="text-base font-bold text-gray-900 dark:text-gray-100">Continue as trainer</div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <div className="text-base font-bold text-white">Continue as trainer</div>
+              <p className="text-sm text-white/55 mt-1.5 leading-relaxed">
                 Manage your own clients, programs, and diet plans.
               </p>
             </div>
@@ -77,16 +141,16 @@ export default function RolePickerPage() {
 
           <button
             onClick={() => pick('client')}
-            className="group flex flex-col items-start gap-4 p-6 rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-orange-400 dark:hover:border-orange-500 hover:shadow-lg transition-all text-left"
+            className="rp-tile group flex flex-col items-start gap-4 p-6 rounded-2xl border border-white/10 backdrop-blur-2xl text-left"
           >
-            <div className="w-12 h-12 rounded-xl bg-blue-50 dark:bg-blue-500/10 flex items-center justify-center text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+            <div className="rp-icon-client w-12 h-12 rounded-xl flex items-center justify-center text-blue-300 group-hover:scale-110 transition-transform">
               <User size={22} />
             </div>
             <div>
-              <div className="text-base font-bold text-gray-900 dark:text-gray-100">
+              <div className="text-base font-bold text-white">
                 Continue as client{trainerName ? ` of ${trainerName}` : ''}
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              <p className="text-sm text-white/55 mt-1.5 leading-relaxed">
                 View your training plan, log sessions, and track your progress.
               </p>
             </div>
