@@ -13,6 +13,7 @@ import {
   Salad,
   UtensilsCrossed,
   Shield,
+  Repeat,
 } from 'lucide-react';
 import ThemeToggle from '../ui/ThemeToggle';
 import { BrandTile } from '../Brand';
@@ -20,6 +21,7 @@ import { useAuthStore } from '../../store/authStore';
 import { usePlanStore } from '../../store/planStore';
 import { useSettingsStore } from '../../store/settingsStore';
 import { useUserStore } from '../../store/userStore';
+import { useDualRole } from '../../hooks/useDualRole';
 
 const BASE_NAV = [
   { id: 'dashboard',        path: '/',                icon: LayoutDashboard, proOnly: false, rehabOnly: false },
@@ -45,7 +47,14 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const isGym = useSettingsStore((s) => s.profileType) === 'gym';
   const userRole         = useUserStore((s) => s.role);
   const roleConfirmed    = useUserStore((s) => s.roleConfirmed);
+  const { isDualRole, clearActiveRole } = useDualRole();
   const [signingOut, setSigningOut] = useState(false);
+
+  function handleSwitchProfile() {
+    clearActiveRole();
+    onClose();
+    navigate('/choose-role');
+  }
 
   const navSections = BASE_NAV
     .filter((item) => !(isGym && item.rehabOnly))
@@ -171,6 +180,15 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Footer */}
       <div className="pt-4 border-t border-white/10 flex flex-col gap-2">
         <ThemeToggle />
+        {isDualRole && (
+          <button
+            onClick={handleSwitchProfile}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/75 hover:bg-white/10 hover:text-white transition-all w-full text-left"
+          >
+            <Repeat size={16} />
+            Switch profile
+          </button>
+        )}
         <button
           onClick={handleSignOut}
           disabled={signingOut}

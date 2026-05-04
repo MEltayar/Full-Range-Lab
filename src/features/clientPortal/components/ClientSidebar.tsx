@@ -1,9 +1,11 @@
 import { useState } from 'react';
-import { Home, ClipboardList, User, X, LogOut } from 'lucide-react';
+import { Home, ClipboardList, User, X, LogOut, Repeat } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import ThemeToggle from '../../../components/ui/ThemeToggle';
 import { BrandTile } from '../../../components/Brand';
 import { useAuthStore } from '../../../store/authStore';
 import { useClientPortalStore } from '../../../store/clientPortalStore';
+import { useDualRole } from '../../../hooks/useDualRole';
 
 export type TabId = 'today' | 'plans' | 'me';
 
@@ -24,6 +26,8 @@ export default function ClientSidebar({ isOpen, onClose, activeTab, setActiveTab
   const linkedClient = useClientPortalStore((s) => s.linkedClient);
   const resetPortal  = useClientPortalStore((s) => s.reset);
   const signOut      = useAuthStore((s) => s.signOut);
+  const navigate     = useNavigate();
+  const { isDualRole, clearActiveRole } = useDualRole();
   const [signingOut, setSigningOut] = useState(false);
 
   const handleSignOut = async () => {
@@ -35,6 +39,12 @@ export default function ClientSidebar({ isOpen, onClose, activeTab, setActiveTab
       setSigningOut(false);
     }
   };
+
+  function handleSwitchProfile() {
+    clearActiveRole();
+    onClose();
+    navigate('/choose-role');
+  }
 
   return (
     <aside
@@ -98,6 +108,15 @@ export default function ClientSidebar({ isOpen, onClose, activeTab, setActiveTab
           </p>
         )}
         <ThemeToggle />
+        {isDualRole && (
+          <button
+            onClick={handleSwitchProfile}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-white/75 hover:bg-white/10 hover:text-white transition-all w-full text-left"
+          >
+            <Repeat size={16} />
+            Switch profile
+          </button>
+        )}
         <button
           onClick={handleSignOut}
           disabled={signingOut}

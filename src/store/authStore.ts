@@ -66,6 +66,9 @@ export const useAuthStore = create<AuthStore>((set) => ({
   },
 
   signOut: async () => {
+    // Clear the dual-role picker choice so the next user on this browser
+    // doesn't inherit our active-role flag.
+    try { localStorage.removeItem('frl_active_role'); } catch { /* ignore */ }
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
   },

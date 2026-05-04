@@ -38,6 +38,7 @@ const FoodLibraryPage     = lazy(() => import('./features/diet/pages/FoodLibrary
 const DietPlansPage       = lazy(() => import('./features/diet/pages/DietPlansPage'));
 const DietPlanBuilderPage = lazy(() => import('./features/diet/pages/DietPlanBuilderPage'));
 const ClientHomePage      = lazy(() => import('./features/clientPortal/pages/ClientHomePage'));
+const RolePickerPage      = lazy(() => import('./pages/RolePickerPage'));
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -53,6 +54,14 @@ const router = createBrowserRouter([
       <ClientProtectedRoute>
         <ClientHomePage />
       </ClientProtectedRoute>
+    ),
+  },
+  {
+    path: '/choose-role',
+    element: (
+      <ProtectedRoute requireDualRole>
+        <RolePickerPage />
+      </ProtectedRoute>
     ),
   },
   {
