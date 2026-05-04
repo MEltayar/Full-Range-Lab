@@ -36,7 +36,11 @@ export default function RolePickerPage() {
         .select('display_name')
         .eq('id', clientRow.user_id)
         .maybeSingle();
-      if (!cancelled) setTrainerName(profile?.display_name ?? null);
+      // display_name often falls back to the trainer's email — strip the domain
+      // so the picker reads "Continue as client of mostafa" not "...@gmail.com".
+      const raw = profile?.display_name?.trim() ?? '';
+      const clean = raw.includes('@') ? raw.split('@')[0] : raw;
+      if (!cancelled) setTrainerName(clean || null);
     })();
     return () => { cancelled = true; };
   }, [linkedClientId]);
