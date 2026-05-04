@@ -5,12 +5,20 @@ import { useSettingsStore } from '../store/settingsStore';
 import { useUserStore } from '../store/userStore';
 import { usePlanStore } from '../store/planStore';
 import { useClientPortalStore } from '../store/clientPortalStore';
+import { useDualRole } from '../hooks/useDualRole';
 
 const LandingPage = lazy(() => import('../pages/LandingPage'));
 
 const LOAD_TIMEOUT_MS = 10_000;
 
-export default function ProtectedRoute({ children }: { children: React.ReactNode }) {
+interface Props {
+  children: React.ReactNode;
+  // When true, this route IS the picker — skip the auto-redirect logic
+  // (the picker handles its own "not dual-role" bounce).
+  requireDualRole?: boolean;
+}
+
+export default function ProtectedRoute({ children, requireDualRole = false }: Props) {
   const user            = useAuthStore((s) => s.user);
   const isLoaded        = useAuthStore((s) => s.isLoaded);
   const profileType     = useSettingsStore((s) => s.profileType);
@@ -21,6 +29,7 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
   const portalLoaded     = useClientPortalStore((s) => s.isLoaded);
   const loadedForUserId  = useClientPortalStore((s) => s.loadedForUserId);
   const fetchPortal      = useClientPortalStore((s) => s.fetch);
+  const { isTrainer, isDualRole, activeRole } = useDualRole();
   const location         = useLocation();
   const [timedOut, setTimedOut] = useState(false);
 
@@ -88,8 +97,16 @@ export default function ProtectedRoute({ children }: { children: React.ReactNode
     return <Navigate to="/login" replace />;
   }
 
-  // Portal client → bounce to client portal
-  if (linkedClient) return <Navigate to="/client" replace />;
+  // Picker page handles its own routing — let it render even for single-role users.
+  if (requireDualRole) return <>{children}</>;
+
+  // Dual-role user without a stored choice → send them to the picker.
+  if (isDualRole && !activeRole) return <Navigate to="/choose-role" replace />;
+
+  // Dual-role user who picked 'client' → portal. Pure portal client → portal.
+  if (linkedClient && (!isTrainer || activeRole === 'client')) {
+    return <Navigate to="/client" replace />;
+  }
 
   // No profile type → onboarding
   if (!profileType) return <Navigate to="/onboarding" replace />;

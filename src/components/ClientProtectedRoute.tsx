@@ -2,6 +2,7 @@ import { useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '../store/authStore';
 import { useClientPortalStore } from '../store/clientPortalStore';
+import { useDualRole } from '../hooks/useDualRole';
 import ClientSetPasswordPage from '../features/clientPortal/pages/ClientSetPasswordPage';
 import ClientSubscriptionExpiredWall from '../features/clientPortal/pages/ClientSubscriptionExpiredWall';
 
@@ -20,6 +21,7 @@ export default function ClientProtectedRoute({ children }: { children: React.Rea
   const portalLoaded    = useClientPortalStore((s) => s.isLoaded);
   const loadedForUserId = useClientPortalStore((s) => s.loadedForUserId);
   const fetchPortal     = useClientPortalStore((s) => s.fetch);
+  const { isDualRole, activeRole } = useDualRole();
 
   // Treat the portal as un-loaded if the cached state belongs to a different
   // auth user — prevents a "Not a portal client" flash when the magic-link
@@ -33,6 +35,13 @@ export default function ClientProtectedRoute({ children }: { children: React.Rea
   if (!authLoaded) return <Spinner />;
   if (!user) return <Navigate to="/login" replace />;
   if (!portalReady) return <Spinner />;
+
+  // Dual-role user without a stored choice → picker.
+  if (isDualRole && !activeRole) return <Navigate to="/choose-role" replace />;
+
+  // Dual-role user who picked 'trainer' → trainer side, even though they
+  // navigated to /client.
+  if (isDualRole && activeRole === 'trainer') return <Navigate to="/" replace />;
 
   if (!linkedClient) {
     return (
