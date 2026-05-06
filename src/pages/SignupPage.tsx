@@ -74,6 +74,14 @@ export default function SignupPage() {
               <strong className="text-white/90">{email}</strong>.
               <br />Click it to activate your account.
             </p>
+            <div className="mt-5 rounded-xl border border-amber-400/25 bg-amber-500/8 px-4 py-3 text-left">
+              <p className="text-xs text-amber-200/90 font-semibold mb-1.5">
+                Don't see it?
+              </p>
+              <p className="text-xs text-amber-100/70 leading-relaxed">
+                Check your <strong className="text-amber-100">Spam</strong> or <strong className="text-amber-100">Junk</strong> folder. If you find it there, mark it as <strong className="text-amber-100">"Not spam"</strong> so future emails reach your inbox.
+              </p>
+            </div>
           </div>
           <p className="text-sm text-white/35">
             Already confirmed?{' '}

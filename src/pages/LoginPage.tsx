@@ -172,6 +172,14 @@ export default function LoginPage() {
                   <p className="text-sm text-white/70 leading-relaxed">
                     Check your inbox at <strong className="text-white/90">{resetEmail}</strong>. Click the link to set a new password.
                   </p>
+                  <div className="w-full rounded-xl border border-amber-400/25 bg-amber-500/8 px-4 py-3 text-left mt-1">
+                    <p className="text-xs text-amber-200/90 font-semibold mb-1.5">
+                      Don't see it?
+                    </p>
+                    <p className="text-xs text-amber-100/70 leading-relaxed">
+                      Check your <strong className="text-amber-100">Spam</strong> or <strong className="text-amber-100">Junk</strong> folder. If you find it there, mark it as <strong className="text-amber-100">"Not spam"</strong> so future emails reach your inbox.
+                    </p>
+                  </div>
                   <button type="button" onClick={() => { setForgotMode(false); setResetSent(false); }}
                     className="text-xs text-orange-300/70 hover:text-orange-200 transition-colors mt-1">
                     Back to sign in
