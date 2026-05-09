@@ -12,15 +12,13 @@ export function initSentry(): void {
     release: import.meta.env.VITE_APP_VERSION,
     integrations: [
       Sentry.browserTracingIntegration(),
-      Sentry.replayIntegration({ maskAllText: false, blockAllMedia: false }),
     ],
     tracesSampleRate: 0.1,
-    replaysSessionSampleRate: 0,
-    replaysOnErrorSampleRate: 1.0,
     ignoreErrors: [
       'ResizeObserver loop limit exceeded',
       'ResizeObserver loop completed with undelivered notifications',
       'Non-Error promise rejection captured',
+      'Refused to evaluate a string as JavaScript',
     ],
   });
 }
