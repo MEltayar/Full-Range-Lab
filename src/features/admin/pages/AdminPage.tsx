@@ -1,7 +1,8 @@
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import {
   Shield, Users, UserCheck, Receipt,
   Pencil, Trash2, RefreshCw, Check, X, ChevronDown, MoreVertical, CalendarPlus,
+  Search, ArrowUp, ArrowDown, ArrowUpDown,
 } from 'lucide-react';
 import { supabase } from '../../../lib/supabase';
 import { useUserStore } from '../../../store/userStore';
@@ -207,6 +208,71 @@ function PeriodEndInput({ value, onCommit }: { value: string | null; onCommit: (
   );
 }
 
+// ── Filter / sort helpers ─────────────────────────────────────────────────────
+
+type SortKey = 'name' | 'plan' | 'status' | 'period' | 'clients';
+type RoleFilter = 'all' | 'user' | 'staff' | 'super_admin';
+type PlanFilter = 'all' | PlanOption | 'none';
+type StatusFilter = 'all' | StatusOption | 'none';
+
+function FilterChipGroup<T extends string>({
+  label, value, options, onChange,
+}: {
+  label: string;
+  value: T;
+  options: { v: T; l: string }[];
+  onChange: (v: T) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 flex-wrap">
+      <span className="text-[10px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">{label}</span>
+      <div className="flex gap-1 flex-wrap">
+        {options.map(({ v, l }) => (
+          <button
+            key={v}
+            onClick={() => onChange(v)}
+            className={`text-[11px] px-2 py-1 rounded-md font-medium transition-colors ${
+              value === v
+                ? 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'
+                : 'bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+            }`}
+          >
+            {l}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function SortableTh({
+  label, sortKey, current, dir, onClick,
+}: {
+  label: string;
+  sortKey: SortKey;
+  current: SortKey;
+  dir: 'asc' | 'desc';
+  onClick: (k: SortKey) => void;
+}) {
+  const active = current === sortKey;
+  return (
+    <th className="px-4 py-2.5 text-left text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">
+      <button
+        type="button"
+        onClick={() => onClick(sortKey)}
+        className={`flex items-center gap-1 hover:text-gray-700 dark:hover:text-gray-200 transition-colors ${
+          active ? 'text-gray-700 dark:text-gray-200' : ''
+        }`}
+      >
+        {label}
+        {active
+          ? (dir === 'asc' ? <ArrowUp size={11} /> : <ArrowDown size={11} />)
+          : <ArrowUpDown size={11} className="opacity-30" />}
+      </button>
+    </th>
+  );
+}
+
 // ── Unified Users Tab ─────────────────────────────────────────────────────────
 
 function UsersTab({ isSuperAdmin, isStaff }: { isSuperAdmin: boolean; isStaff: boolean }) {
@@ -214,10 +280,18 @@ function UsersTab({ isSuperAdmin, isStaff }: { isSuperAdmin: boolean; isStaff: b
   const [users, setUsers] = useState<UnifiedUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-  const menuContainerRef = useRef<HTMLTableSectionElement | null>(null);
+  const menuContainerRef = useRef<HTMLDivElement | null>(null);
   const showToast = useToastStore((s) => s.showToast);
 
-  // Close the kebab menu on any click outside the table body or on Escape.
+  // Search / filter / sort
+  const [searchQ, setSearchQ] = useState('');
+  const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
+  const [planFilter, setPlanFilter] = useState<PlanFilter>('all');
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
+
+  // Close the kebab menu on any click outside or on Escape.
   useEffect(() => {
     if (!openMenuId) return;
     const onPointer = (e: MouseEvent) => {
@@ -356,193 +430,477 @@ function UsersTab({ isSuperAdmin, isStaff }: { isSuperAdmin: boolean; isStaff: b
     await upsertSub(u.id, { current_period_end: next.toISOString() });
   }
 
+  // Apply search, filters, then sort. Keep the original list intact for counts.
+  const visibleUsers = useMemo(() => {
+    let list = users;
+
+    const q = searchQ.trim().toLowerCase();
+    if (q) {
+      list = list.filter((u) =>
+        (u.displayName ?? '').toLowerCase().includes(q) ||
+        u.id.toLowerCase().startsWith(q),
+      );
+    }
+
+    if (roleFilter !== 'all') {
+      list = list.filter((u) =>
+        roleFilter === 'user' ? (!u.role || u.role === 'user') : u.role === roleFilter,
+      );
+    }
+
+    if (planFilter !== 'all') {
+      list = list.filter((u) => planFilter === 'none' ? u.plan == null : u.plan === planFilter);
+    }
+
+    if (statusFilter !== 'all') {
+      list = list.filter((u) => statusFilter === 'none' ? u.status == null : u.status === statusFilter);
+    }
+
+    const dir = sortDir === 'asc' ? 1 : -1;
+    return [...list].sort((a, b) => {
+      switch (sortKey) {
+        case 'name':    return ((a.displayName ?? '').localeCompare(b.displayName ?? '')) * dir;
+        case 'plan':    return ((a.plan ?? '').localeCompare(b.plan ?? '')) * dir;
+        case 'status':  return ((a.status ?? '').localeCompare(b.status ?? '')) * dir;
+        case 'period': {
+          const av = a.currentPeriodEnd ? new Date(a.currentPeriodEnd).getTime() : 0;
+          const bv = b.currentPeriodEnd ? new Date(b.currentPeriodEnd).getTime() : 0;
+          return (av - bv) * dir;
+        }
+        case 'clients': return (a.activeClients - b.activeClients) * dir;
+      }
+    });
+  }, [users, searchQ, roleFilter, planFilter, statusFilter, sortKey, sortDir]);
+
+  function toggleSort(k: SortKey) {
+    if (sortKey === k) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else { setSortKey(k); setSortDir('asc'); }
+  }
+
+  const filtersActive =
+    !!searchQ.trim() || roleFilter !== 'all' || planFilter !== 'all' || statusFilter !== 'all';
+
+  function clearFilters() {
+    setSearchQ('');
+    setRoleFilter('all');
+    setPlanFilter('all');
+    setStatusFilter('all');
+  }
+
   if (loading) return <Loader />;
 
   return (
-    <div className="rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-      <div className="overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700">
-            <tr>
-              <Th>Name</Th>
-              <Th>Role</Th>
-              <Th>Plan</Th>
-              <Th>Status</Th>
-              <Th>Period End</Th>
-              <Th>Clients</Th>
-              {canManage && <Th>Actions</Th>}
-            </tr>
-          </thead>
-          <tbody ref={menuContainerRef} className="divide-y divide-gray-100 dark:divide-gray-700/50">
-            {users.map((u) => {
-              const canEdit = canManage && u.role !== 'super_admin';
-              return (
-                <tr key={u.id} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition-colors">
+    <div ref={menuContainerRef} className="flex flex-col gap-3">
 
-                  {/* Name */}
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0">
-                        <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                          {(u.displayName ?? '?')[0].toUpperCase()}
-                        </span>
+      {/* Toolbar: search + filter chips */}
+      <div className="flex flex-col gap-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/40 p-3">
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+          <input
+            value={searchQ}
+            onChange={(e) => setSearchQ(e.target.value)}
+            placeholder="Search by name or ID…"
+            className="w-full pl-9 pr-9 py-2 text-sm rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+          />
+          {searchQ && (
+            <button
+              onClick={() => setSearchQ('')}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+            >
+              <X size={12} />
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          <FilterChipGroup<RoleFilter>
+            label="Role"
+            value={roleFilter}
+            onChange={setRoleFilter}
+            options={[
+              { v: 'all',         l: 'All' },
+              { v: 'user',        l: 'Users' },
+              { v: 'staff',       l: 'Staff' },
+              { v: 'super_admin', l: 'Super Admin' },
+            ]}
+          />
+          <FilterChipGroup<PlanFilter>
+            label="Plan"
+            value={planFilter}
+            onChange={setPlanFilter}
+            options={[
+              { v: 'all',         l: 'All' },
+              { v: 'trial',       l: 'Trial' },
+              { v: 'pro_monthly', l: 'Monthly' },
+              { v: 'pro_yearly',  l: 'Yearly' },
+              { v: 'none',        l: 'No plan' },
+            ]}
+          />
+          <FilterChipGroup<StatusFilter>
+            label="Status"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={[
+              { v: 'all',     l: 'All' },
+              { v: 'active',  l: 'Active' },
+              { v: 'expired', l: 'Expired' },
+              { v: 'none',    l: 'No status' },
+            ]}
+          />
+          {filtersActive && (
+            <button
+              onClick={clearFilters}
+              className="text-[11px] text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 font-medium ml-auto"
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Desktop / tablet table ─────────────────────────────────────── */}
+      <div className="hidden md:block rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead className="bg-gray-50 dark:bg-gray-800/80 border-b border-gray-200 dark:border-gray-700">
+              <tr>
+                <SortableTh label="Name"       sortKey="name"    current={sortKey} dir={sortDir} onClick={toggleSort} />
+                <Th>Role</Th>
+                <SortableTh label="Plan"       sortKey="plan"    current={sortKey} dir={sortDir} onClick={toggleSort} />
+                <SortableTh label="Status"     sortKey="status"  current={sortKey} dir={sortDir} onClick={toggleSort} />
+                <SortableTh label="Period End" sortKey="period"  current={sortKey} dir={sortDir} onClick={toggleSort} />
+                <SortableTh label="Clients"    sortKey="clients" current={sortKey} dir={sortDir} onClick={toggleSort} />
+                {canManage && <Th>Actions</Th>}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-700/50">
+              {visibleUsers.map((u) => {
+                const canEdit = canManage && u.role !== 'super_admin';
+                return (
+                  <tr key={u.id} className="hover:bg-gray-50/60 dark:hover:bg-gray-800/40 transition-colors">
+
+                    {/* Name */}
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-7 h-7 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0">
+                          <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                            {(u.displayName ?? '?')[0].toUpperCase()}
+                          </span>
+                        </div>
+                        <div>
+                          <EditableText
+                            value={u.displayName ?? ''}
+                            onSave={(v) => updateName(u.id, v)}
+                            disabled={!canEdit}
+                          />
+                          <p className="text-[10px] text-gray-400 font-mono">{u.id.slice(0, 16)}…</p>
+                        </div>
                       </div>
-                      <div>
-                        <EditableText
-                          value={u.displayName ?? ''}
-                          onSave={(v) => updateName(u.id, v)}
-                          disabled={!canEdit}
-                        />
-                        <p className="text-[10px] text-gray-400 font-mono">{u.id.slice(0, 16)}…</p>
-                      </div>
-                    </div>
-                  </td>
+                    </td>
 
-                  {/* Role */}
-                  <td className="px-4 py-3">
-                    {canEdit && isSuperAdmin ? (
-                      <select
-                        value={u.role ?? ''}
-                        onChange={(e) => updateRole(u.id, e.target.value)}
-                        className="text-xs px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
-                      >
-                        <option value="">User</option>
-                        <option value="staff">Staff</option>
-                        <option value="super_admin">Super Admin</option>
-                      </select>
-                    ) : (
-                      <RoleBadge role={u.role} />
-                    )}
-                  </td>
-
-                  {/* Plan */}
-                  <td className="px-4 py-3">
-                    {canManage ? (
-                      <div className="relative inline-flex items-center gap-1">
+                    {/* Role */}
+                    <td className="px-4 py-3">
+                      {canEdit && isSuperAdmin ? (
                         <select
-                          value={u.plan ?? 'trial'}
-                          onChange={(e) => handlePlanChange(u, e.target.value as PlanOption)}
-                          className="appearance-none pr-5 text-[11px] font-medium border-0 bg-transparent cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-400 rounded"
+                          value={u.role ?? ''}
+                          onChange={(e) => updateRole(u.id, e.target.value)}
+                          className="text-xs px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
                         >
-                          {PLAN_OPTIONS.map((p) => (
-                            <option key={p} value={p}>{PLAN_LABELS[p]}</option>
-                          ))}
+                          <option value="">User</option>
+                          <option value="staff">Staff</option>
+                          <option value="super_admin">Super Admin</option>
                         </select>
-                        <ChevronDown size={10} className="absolute right-0 pointer-events-none text-gray-400" />
-                      </div>
-                    ) : (
-                      <PlanBadge plan={u.plan ?? 'trial'} />
-                    )}
-                  </td>
-
-                  {/* Status */}
-                  <td className="px-4 py-3">
-                    {u.status && canManage ? (
-                      <SelectCell<StatusOption>
-                        value={u.status}
-                        options={[...STATUS_OPTIONS]}
-                        renderOption={(v) => v === 'active' ? 'Active' : 'Expired'}
-                        onSave={(v) => handleStatusChange(u, v)}
-                      />
-                    ) : u.status ? (
-                      <StatusBadge status={u.status} />
-                    ) : (
-                      <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
-                    )}
-                  </td>
-
-                  {/* Period End */}
-                  <td className="px-4 py-3 whitespace-nowrap">
-                    {u.subId && canManage ? (
-                      <PeriodEndInput
-                        value={u.currentPeriodEnd}
-                        onCommit={(v) => handlePeriodEndChange(u, v)}
-                      />
-                    ) : (
-                      <span className="text-xs text-gray-500 dark:text-gray-400">{fmt(u.currentPeriodEnd)}</span>
-                    )}
-                  </td>
-
-                  {/* Clients — active count from DB, trial counter in secondary text */}
-                  <td className="px-4 py-3 text-center">
-                    <span className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{u.activeClients}</span>
-                    {u.subId && u.clientsCreated !== u.activeClients && (
-                      <span className="block text-[10px] text-gray-400 dark:text-gray-500" title="Trial counter (includes deleted)">
-                        {u.clientsCreated} ever
-                      </span>
-                    )}
-                  </td>
-
-                  {/* Actions */}
-                  {canManage && (
-                    <td className="px-2 py-3 w-10 text-right relative">
-                      {u.subId && (
-                        <>
-                          <button
-                            onClick={() => setOpenMenuId((prev) => (prev === u.id ? null : u.id))}
-                            title="Subscription actions"
-                            aria-label="Open subscription actions"
-                            aria-haspopup="menu"
-                            aria-expanded={openMenuId === u.id}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                          >
-                            <MoreVertical size={16} />
-                          </button>
-                          {openMenuId === u.id && (
-                            <div
-                              role="menu"
-                              className="absolute right-2 top-full mt-1 z-30 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl py-1 text-left"
-                            >
-                              <button
-                                role="menuitem"
-                                onClick={() => { handleExtend(u, 30); setOpenMenuId(null); }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors font-semibold"
-                              >
-                                <CalendarPlus size={12} /> Extend +30 days
-                              </button>
-                              <button
-                                role="menuitem"
-                                onClick={() => { handleExtend(u, 365); setOpenMenuId(null); }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors font-semibold"
-                              >
-                                <CalendarPlus size={12} /> Extend +1 year
-                              </button>
-                              <div className="my-1 border-t border-gray-100 dark:border-gray-700/60" />
-                              <button
-                                role="menuitem"
-                                onClick={() => { upsertSub(u.id, { trial_started_at: new Date().toISOString() }); setOpenMenuId(null); }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors"
-                              >
-                                <RefreshCw size={12} /> Reset trial to today
-                              </button>
-                              <button
-                                role="menuitem"
-                                onClick={() => { upsertSub(u.id, { clients_created: 0 }); setOpenMenuId(null); }}
-                                className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors"
-                              >
-                                <RefreshCw size={12} /> Reset clients counter
-                              </button>
-                            </div>
-                          )}
-                        </>
+                      ) : (
+                        <RoleBadge role={u.role} />
                       )}
                     </td>
-                  )}
+
+                    {/* Plan */}
+                    <td className="px-4 py-3">
+                      {canManage ? (
+                        <div className="relative inline-flex items-center gap-1">
+                          <select
+                            value={u.plan ?? 'trial'}
+                            onChange={(e) => handlePlanChange(u, e.target.value as PlanOption)}
+                            className="appearance-none pr-5 text-[11px] font-medium border-0 bg-transparent cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-400 rounded"
+                          >
+                            {PLAN_OPTIONS.map((p) => (
+                              <option key={p} value={p}>{PLAN_LABELS[p]}</option>
+                            ))}
+                          </select>
+                          <ChevronDown size={10} className="absolute right-0 pointer-events-none text-gray-400" />
+                        </div>
+                      ) : (
+                        <PlanBadge plan={u.plan ?? 'trial'} />
+                      )}
+                    </td>
+
+                    {/* Status */}
+                    <td className="px-4 py-3">
+                      {u.status && canManage ? (
+                        <SelectCell<StatusOption>
+                          value={u.status}
+                          options={[...STATUS_OPTIONS]}
+                          renderOption={(v) => v === 'active' ? 'Active' : 'Expired'}
+                          onSave={(v) => handleStatusChange(u, v)}
+                        />
+                      ) : u.status ? (
+                        <StatusBadge status={u.status} />
+                      ) : (
+                        <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
+                      )}
+                    </td>
+
+                    {/* Period End */}
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      {u.subId && canManage ? (
+                        <PeriodEndInput
+                          value={u.currentPeriodEnd}
+                          onCommit={(v) => handlePeriodEndChange(u, v)}
+                        />
+                      ) : (
+                        <span className="text-xs text-gray-500 dark:text-gray-400">{fmt(u.currentPeriodEnd)}</span>
+                      )}
+                    </td>
+
+                    {/* Clients */}
+                    <td className="px-4 py-3 text-center">
+                      <span className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{u.activeClients}</span>
+                      {u.subId && u.clientsCreated !== u.activeClients && (
+                        <span className="block text-[10px] text-gray-400 dark:text-gray-500" title="Trial counter (includes deleted)">
+                          {u.clientsCreated} ever
+                        </span>
+                      )}
+                    </td>
+
+                    {/* Actions */}
+                    {canManage && (
+                      <td className="px-2 py-3 w-10 text-right relative">
+                        {u.subId && (
+                          <>
+                            <button
+                              onClick={() => setOpenMenuId((prev) => (prev === u.id ? null : u.id))}
+                              title="Subscription actions"
+                              aria-label="Open subscription actions"
+                              aria-haspopup="menu"
+                              aria-expanded={openMenuId === u.id}
+                              className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                            >
+                              <MoreVertical size={16} />
+                            </button>
+                            {openMenuId === u.id && (
+                              <div
+                                role="menu"
+                                className="absolute right-2 top-full mt-1 z-30 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl py-1 text-left"
+                              >
+                                <button
+                                  role="menuitem"
+                                  onClick={() => { handleExtend(u, 30); setOpenMenuId(null); }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors font-semibold"
+                                >
+                                  <CalendarPlus size={12} /> Extend +30 days
+                                </button>
+                                <button
+                                  role="menuitem"
+                                  onClick={() => { handleExtend(u, 365); setOpenMenuId(null); }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 transition-colors font-semibold"
+                                >
+                                  <CalendarPlus size={12} /> Extend +1 year
+                                </button>
+                                <div className="my-1 border-t border-gray-100 dark:border-gray-700/60" />
+                                <button
+                                  role="menuitem"
+                                  onClick={() => { upsertSub(u.id, { trial_started_at: new Date().toISOString() }); setOpenMenuId(null); }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30 transition-colors"
+                                >
+                                  <RefreshCw size={12} /> Reset trial to today
+                                </button>
+                                <button
+                                  role="menuitem"
+                                  onClick={() => { upsertSub(u.id, { clients_created: 0 }); setOpenMenuId(null); }}
+                                  className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/60 transition-colors"
+                                >
+                                  <RefreshCw size={12} /> Reset clients counter
+                                </button>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
+              {visibleUsers.length === 0 && (
+                <tr>
+                  <td colSpan={canManage ? 7 : 6} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
+                    {users.length === 0 ? 'No users yet.' : 'No users match your filters.'}
+                  </td>
                 </tr>
-              );
-            })}
-            {users.length === 0 && (
-              <tr>
-                <td colSpan={canManage ? 7 : 6} className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500">
-                  No users yet.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700/50 text-xs text-gray-400 dark:text-gray-500">
+          {filtersActive
+            ? `${visibleUsers.length} of ${users.length} user${users.length !== 1 ? 's' : ''}`
+            : `${users.length} user${users.length !== 1 ? 's' : ''}`}
+        </div>
       </div>
-      <div className="px-4 py-2 border-t border-gray-100 dark:border-gray-700/50 text-xs text-gray-400 dark:text-gray-500">
-        {users.length} user{users.length !== 1 ? 's' : ''}
+
+      {/* ── Mobile cards ────────────────────────────────────────────────── */}
+      <div className="md:hidden flex flex-col gap-2.5">
+        {visibleUsers.length === 0 && (
+          <div className="px-4 py-10 text-center text-sm text-gray-400 dark:text-gray-500 rounded-xl border border-gray-200 dark:border-gray-700">
+            {users.length === 0 ? 'No users yet.' : 'No users match your filters.'}
+          </div>
+        )}
+        {visibleUsers.map((u) => {
+          const canEdit = canManage && u.role !== 'super_admin';
+          return (
+            <div
+              key={u.id}
+              className="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800/40 p-3.5 flex flex-col gap-3"
+            >
+              {/* Header — avatar, name, role, kebab */}
+              <div className="flex items-start gap-2.5">
+                <div className="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-900/40 flex items-center justify-center shrink-0">
+                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                    {(u.displayName ?? '?')[0].toUpperCase()}
+                  </span>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <EditableText
+                    value={u.displayName ?? ''}
+                    onSave={(v) => updateName(u.id, v)}
+                    disabled={!canEdit}
+                  />
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <RoleBadge role={u.role} />
+                    <p className="text-[10px] text-gray-400 font-mono truncate">{u.id.slice(0, 12)}…</p>
+                  </div>
+                </div>
+                {canManage && u.subId && (
+                  <div className="relative">
+                    <button
+                      onClick={() => setOpenMenuId((prev) => (prev === u.id ? null : u.id))}
+                      title="Subscription actions"
+                      aria-haspopup="menu"
+                      aria-expanded={openMenuId === u.id}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+                    >
+                      <MoreVertical size={16} />
+                    </button>
+                    {openMenuId === u.id && (
+                      <div
+                        role="menu"
+                        className="absolute right-0 top-full mt-1 z-30 w-48 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-xl py-1 text-left"
+                      >
+                        <button role="menuitem" onClick={() => { handleExtend(u, 30); setOpenMenuId(null); }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 font-semibold">
+                          <CalendarPlus size={12} /> Extend +30 days
+                        </button>
+                        <button role="menuitem" onClick={() => { handleExtend(u, 365); setOpenMenuId(null); }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-emerald-700 dark:text-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-900/30 font-semibold">
+                          <CalendarPlus size={12} /> Extend +1 year
+                        </button>
+                        <div className="my-1 border-t border-gray-100 dark:border-gray-700/60" />
+                        <button role="menuitem" onClick={() => { upsertSub(u.id, { trial_started_at: new Date().toISOString() }); setOpenMenuId(null); }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-amber-700 dark:text-amber-300 hover:bg-amber-50 dark:hover:bg-amber-900/30">
+                          <RefreshCw size={12} /> Reset trial to today
+                        </button>
+                        <button role="menuitem" onClick={() => { upsertSub(u.id, { clients_created: 0 }); setOpenMenuId(null); }}
+                          className="w-full flex items-center gap-2 px-3 py-2 text-xs text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/60">
+                          <RefreshCw size={12} /> Reset clients counter
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Field grid */}
+              <div className="grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
+                <div>
+                  <span className="block text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-0.5">Plan</span>
+                  {canManage ? (
+                    <div className="relative inline-flex items-center gap-1">
+                      <select
+                        value={u.plan ?? 'trial'}
+                        onChange={(e) => handlePlanChange(u, e.target.value as PlanOption)}
+                        className="appearance-none pr-5 text-xs font-medium border-0 bg-transparent cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-400 rounded text-gray-800 dark:text-gray-100"
+                      >
+                        {PLAN_OPTIONS.map((p) => (
+                          <option key={p} value={p}>{PLAN_LABELS[p]}</option>
+                        ))}
+                      </select>
+                      <ChevronDown size={10} className="absolute right-0 pointer-events-none text-gray-400" />
+                    </div>
+                  ) : (
+                    <PlanBadge plan={u.plan ?? 'trial'} />
+                  )}
+                </div>
+
+                <div>
+                  <span className="block text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-0.5">Status</span>
+                  {u.status && canManage ? (
+                    <SelectCell<StatusOption>
+                      value={u.status}
+                      options={[...STATUS_OPTIONS]}
+                      renderOption={(v) => v === 'active' ? 'Active' : 'Expired'}
+                      onSave={(v) => handleStatusChange(u, v)}
+                    />
+                  ) : u.status ? (
+                    <StatusBadge status={u.status} />
+                  ) : (
+                    <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
+                  )}
+                </div>
+
+                <div>
+                  <span className="block text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-0.5">Period End</span>
+                  {u.subId && canManage ? (
+                    <PeriodEndInput
+                      value={u.currentPeriodEnd}
+                      onCommit={(v) => handlePeriodEndChange(u, v)}
+                    />
+                  ) : (
+                    <span className="text-xs text-gray-600 dark:text-gray-300">{fmt(u.currentPeriodEnd)}</span>
+                  )}
+                </div>
+
+                <div>
+                  <span className="block text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-0.5">Clients</span>
+                  <span className="font-semibold text-gray-800 dark:text-gray-200 text-sm">{u.activeClients}</span>
+                  {u.subId && u.clientsCreated !== u.activeClients && (
+                    <span className="ml-1 text-[10px] text-gray-400 dark:text-gray-500">/ {u.clientsCreated} ever</span>
+                  )}
+                </div>
+
+                {canEdit && isSuperAdmin && (
+                  <div className="col-span-2">
+                    <span className="block text-[10px] uppercase tracking-wide text-gray-400 dark:text-gray-500 mb-0.5">Role</span>
+                    <select
+                      value={u.role ?? ''}
+                      onChange={(e) => updateRole(u.id, e.target.value)}
+                      className="text-xs px-2 py-1.5 rounded-lg border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-orange-500 cursor-pointer"
+                    >
+                      <option value="">User</option>
+                      <option value="staff">Staff</option>
+                      <option value="super_admin">Super Admin</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        <p className="px-1 py-1 text-xs text-gray-400 dark:text-gray-500">
+          {filtersActive
+            ? `${visibleUsers.length} of ${users.length} user${users.length !== 1 ? 's' : ''}`
+            : `${users.length} user${users.length !== 1 ? 's' : ''}`}
+        </p>
       </div>
     </div>
   );
