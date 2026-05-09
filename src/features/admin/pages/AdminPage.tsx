@@ -444,7 +444,7 @@ function UsersTab({ isSuperAdmin, isStaff }: { isSuperAdmin: boolean; isStaff: b
 
     if (roleFilter !== 'all') {
       list = list.filter((u) =>
-        roleFilter === 'user' ? (!u.role || u.role === 'user') : u.role === roleFilter,
+        roleFilter === 'user' ? !u.role : u.role === roleFilter,
       );
     }
 
